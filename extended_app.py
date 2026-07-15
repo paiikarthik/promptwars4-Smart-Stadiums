@@ -35,7 +35,7 @@ app.register_blueprint(parking_bp, url_prefix="/extended")
 def inject_extended_features(response):
     """Intercepts HTML responses and dynamically injects navigation buttons
     and advanced capability scripts, leaving production templates on disk untouched.
-    Only runs for dashboard, admin, and extended pages to minimize side effects.
+    Performs global name replacement from StadiumIQ to ArenaFlow on all templates including login.
     Adds security headers to harden the browser context.
     """
     # Enforce secure headers
@@ -43,41 +43,42 @@ def inject_extended_features(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
 
-    # Only inject menus/scripts on user dashboard or admin views
     from flask import request
-    allowed_paths = ["/dashboard", "/admin", "/extended/"]
-    if not any(request.path.startswith(p) for p in allowed_paths):
-        return response
 
     if response.status_code == 200 and response.headers.get("Content-Type") and "text/html" in response.headers.get("Content-Type", ""):
         try:
             html = response.get_data(as_text=True)
             
-            # Inject new navigation buttons before the Logout button
-            old_button = '<button class="btn-logout" onclick="handleLogout()">Logout</button>'
-            if old_button in html:
-                menu_injection = (
-                    '<a href="/extended/chatbot" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🤖 Super Assistant</a>'
-                    '<a href="/extended/seat-map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🎟️ Seat Viewer</a>'
-                    '<a href="/extended/schedule" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">📅 Schedule</a>'
-                    '<a href="/extended/map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🗺️ Stadium Map</a>'
-                    '<a href="/extended/navigation" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🧭 Navigation</a>'
-                    '<a href="/extended/weather" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🌦️ Weather</a>'
-                    '<a href="/extended/parking-map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🚗 Smart Parking</a>'
-                )
-                html = html.replace(old_button, menu_injection + old_button)
-                
-            # Inject advanced capabilities scripts right before closing body tag
-            if "</body>" in html:
-                script_injection = (
-                    '<script src="/static/js/indian_lang.js"></script>'
-                    '<script src="/static/js/voice_assistant.js"></script>'
-                )
-                html = html.replace("</body>", script_injection + "</body>")
+            # Global name replacement to ArenaFlow (including login portal)
+            html = html.replace("StadiumIQ", "ArenaFlow")
+            
+            # Only inject menus/scripts on user dashboard, admin, and extended views
+            if any(request.path.startswith(p) for p in ["/dashboard", "/admin", "/extended/"]):
+                # Inject new navigation buttons before the Logout button
+                old_button = '<button class="btn-logout" onclick="handleLogout()">Logout</button>'
+                if old_button in html:
+                    menu_injection = (
+                        '<a href="/extended/chatbot" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🤖 Super Assistant</a>'
+                        '<a href="/extended/seat-map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🎟️ Seat Viewer</a>'
+                        '<a href="/extended/schedule" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">📅 Schedule</a>'
+                        '<a href="/extended/map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🗺️ Stadium Map</a>'
+                        '<a href="/extended/navigation" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🧭 Navigation</a>'
+                        '<a href="/extended/weather" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🌦️ Weather</a>'
+                        '<a href="/extended/parking-map" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🚗 Smart Parking</a>'
+                    )
+                    html = html.replace(old_button, menu_injection + old_button)
+                    
+                # Inject advanced capabilities scripts right before closing body tag
+                if "</body>" in html:
+                    script_injection = (
+                        '<script src="/static/js/indian_lang.js"></script>'
+                        '<script src="/static/js/voice_assistant.js"></script>'
+                    )
+                    html = html.replace("</body>", script_injection + "</body>")
                 
             response.set_data(html)
         except Exception as e:
-            logger.error(f"HTML dynamic injection failed: {e}")
+            logger.error(f"HTML dynamic injection/replacement failed: {e}")
     return response
 
 if __name__ == "__main__":
