@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Interactive Stadium Map</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/stadium_map.css">
+    <style>
+        #map-canvas {
+            height: 60vh;
+            width: 100%;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-sm);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🗺️</span> ArenaFlow | Interactive Map
+        </div>
+        <div class="nav-user">
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-grid">
+            <!-- Left Panel: Map Grid -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap:1rem;">
+                <h2 class="section-title">🗺️ Google Stadium Explorer</h2>
+                <p style="font-size:0.85rem; color:var(--text-secondary);">
+                    Explore entry points, exits, and facilities. Pins update with real-time queue lengths and wait times.
+                </p>
+                <!-- Maps Canvas -->
+                <div id="map-canvas">
+                    <!-- Leaflet fallback will be rendered inside the JS file if Maps key is missing to ensure it runs! -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Controls & Details -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap:1.25rem; height:fit-content;">
+                <h2 class="section-title">🔍 Quick Filters</h2>
+                
+                <!-- Category Buttons grid -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('gates')">🚪 Gates</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('restrooms')">🚻 Restrooms</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('food')">🍕 Food Stands</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('medical')">🏥 Medical</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('parking')">🚗 Parking</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('atms')">🏦 ATMs</button>
+                    <button class="toggle-btn" style="width:auto;" onclick="filterMapMarkers('all')">👁️ Show All</button>
+                </div>
+
+                <h3 style="font-size: 1rem; font-weight:700; margin-top: 0.5rem;">📍 Selected Facility Details</h3>
+                <div id="facility-details-card" class="glass-card" style="padding:1.25rem; background:rgba(0,0,0,0.15); display:flex; flex-direction:column; gap:0.5rem; min-height: 120px;">
+                    <p style="opacity:0.6; text-align:center; margin-top:30px; font-size:0.85rem;">Click on any marker pin to inspect live occupancy and queues.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Google Maps API Loader (with fallback) -->
+    <script src="/static/js/stadium_map.js"></script>
+</body>
+</html>

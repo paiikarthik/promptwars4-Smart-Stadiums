@@ -1,0 +1,29 @@
+/* Seating layout grid stylings */
+.seating-grid-container {
+    max-width: 100%;
+}
+.seat-dot {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+}
+.seat-dot:hover {
+    transform: scale(1.2);
+}
+.seat-available {
+    background: #475569; /* Slate Available */
+}
+.seat-booked {
+    background: #ef4444; /* Red Booked */
+}
+.seat-vip {
+    background: #eab308; /* Gold VIP */
+}
+.seat-accessible {
+    background: #3b82f6; /* Blue Accessible */
+}

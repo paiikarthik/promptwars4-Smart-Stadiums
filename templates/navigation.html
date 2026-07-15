@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Assistive Navigation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/navigation.css">
+    <style>
+        #navigation-canvas {
+            height: 50vh;
+            width: 100%;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-sm);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🧭</span> ArenaFlow | Assistive Navigation
+        </div>
+        <div class="nav-user">
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-grid">
+            <!-- Left Panel: Navigation Inputs -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap:1.25rem; height:fit-content;">
+                <h2 class="section-title">🧭 Pathfinder Route Planner</h2>
+                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                    Input your seat number and select a target amenity to map the fastest, clearest pathway.
+                </p>
+
+                <form onsubmit="calculateDirections(event)" style="display:flex; flex-direction:column; gap:1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="nav-start">Start Location (Your Seat / Block)</label>
+                        <input type="text" id="nav-start" class="form-input" placeholder="e.g. Block N Row 12" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="nav-end">Select Target Facility</label>
+                        <select id="nav-end" class="form-input" required>
+                            <option value="restroom-north">Restroom (North Concourse)</option>
+                            <option value="restroom-south">Restroom (South Concourse)</option>
+                            <option value="medical-nc">Medical Care Stand (Zone NC)</option>
+                            <option value="food-court">Food Stand (Concourse Food)</option>
+                            <option value="exit-west">Exit Gate West</option>
+                            <option value="exit-north">Exit Gate North</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-submit" style="margin-top:0.5rem;">⚡ Map Pathway</button>
+                </form>
+            </div>
+
+            <!-- Right Panel: Navigation Route & Steps -->
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div class="glass-card dashboard-section" style="padding:1rem;">
+                    <div id="navigation-canvas">
+                        <!-- Directions route mapping canvas -->
+                    </div>
+                </div>
+
+                <!-- Navigation Steps -->
+                <div class="glass-card dashboard-section">
+                    <h2 class="section-title">🚶 Step-by-Step Directions</h2>
+                    <ul class="info-list" id="navigation-steps" style="margin-top: 1rem; max-height: 250px; overflow-y:auto; padding-right:0.25rem;">
+                        <li class="info-item" style="color:var(--text-muted);">Enter start seat and select target above to compute directions.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="/static/js/navigation.js"></script>
+</body>
+</html>

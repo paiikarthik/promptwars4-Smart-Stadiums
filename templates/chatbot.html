@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | AI Super Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/chatbot.css">
+    <link rel="stylesheet" href="/static/css/indian_lang.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span data-translate="lbl_assistant_title">🤖 AI Stadium Super Assistant</span>
+        </div>
+        <div class="nav-user">
+            <!-- Indian Language Dropdown -->
+            <select id="indian-lang-selector" onchange="changeIndianLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="ml">മലയാളം (Malayalam)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+                <option value="ur">اردو (Urdu)</option>
+                <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                <option value="kok">ಕೊಂಕಣಿ (Konkani)</option>
+            </select>
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Main Chat layout wrapper -->
+        <div class="glass-card chatbot-layout" style="display:flex; flex-direction:column; height: 75vh; max-width: 800px; margin: 0 auto; overflow: hidden; padding: 0;">
+            <!-- Header bar inside chat -->
+            <div style="padding: 1.25rem; border-bottom: 1px solid var(--glass-border); display:flex; justify-content:space-between; align-items:center; background: rgba(0,0,0,0.15);">
+                <div style="display:flex; align-items:center; gap: 0.75rem;">
+                    <div style="font-size: 1.5rem;">🤖</div>
+                    <div>
+                        <h2 style="font-size: 1.05rem; font-weight:700;" data-translate="lbl_assistant_title">Stadium Super Assistant</h2>
+                        <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:0.25rem;">
+                            <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span> Grounded via Gemini & Places
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Voice Mode Indicator Button -->
+                <button id="btn-voice-chat" class="toggle-btn" style="width:auto; margin:0; padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="startVoiceRecognition()">
+                    🎤 Listen Mode
+                </button>
+            </div>
+
+            <!-- Messages Stream Area -->
+            <div id="super-chat-messages" style="flex:1; overflow-y:auto; padding: 1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                <div class="chat-msg bot">
+                    <p>Namaste! I am the ArenaFlow Super Assistant 🤖. I am grounded with live maps, schedules, seats occupancy, and local metro transit coordinates.</p>
+                    <p>Ask me about matches, parking lots, seat details, nearby hotels, or restrooms!</p>
+                </div>
+            </div>
+
+            <!-- Typing Bar & Microphones -->
+            <form onsubmit="handleSuperChatSubmit(event)" style="padding: 1rem; border-top: 1px solid var(--glass-border); display:flex; gap:0.75rem; background:rgba(0,0,0,0.1);">
+                <input type="text" id="super-chat-input" class="chat-input" placeholder="Type a message or use Listen Mode..." required autocomplete="off" style="flex:1; border-radius: 50px;">
+                <button type="button" class="btn-send" id="btn-hold-speak" style="background:var(--accent); border-radius:50%; width: 45px; height: 45px; flex:none; display:flex; align-items:center; justify-content:center; padding:0;" onclick="toggleHoldToSpeak()">🎤</button>
+                <button type="submit" class="btn-send" style="border-radius:50%; width: 45px; height: 45px; flex:none; display:flex; align-items:center; justify-content:center; padding:0;">➔</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="/static/js/indian_lang.js"></script>
+    <script src="/static/js/voice_assistant.js"></script>
+    <script src="/static/js/chatbot.js"></script>
+</body>
+</html>

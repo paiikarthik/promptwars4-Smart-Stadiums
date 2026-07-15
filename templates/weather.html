@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Match Weather Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/weather.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🌦️</span> ArenaFlow | Weather Center
+        </div>
+        <div class="nav-user">
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-grid">
+            <!-- Left Panel: Current Weather card -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap:1.5rem; justify-content:space-between; height: 100%;">
+                <div>
+                    <h2 class="section-title">☀️ Current Weather Conditions</h2>
+                    <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.25rem;">
+                        Real-time temperature and advisories matching current match schedule.
+                    </p>
+                </div>
+
+                <!-- Weather metrics block -->
+                <div style="display:flex; justify-content:space-around; align-items:center; margin: 1.5rem 0; flex-wrap:wrap; gap:1rem;">
+                    <div style="text-align:center;">
+                        <div style="font-size: 5rem; line-height:1; font-weight:800; color:var(--warning);" id="weather-val-temp">28°C</div>
+                        <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.5rem;" id="weather-val-desc">Sunny & Warm</div>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:0.75rem; font-size:0.95rem;">
+                        <div>🌧️ Rain Risk: <strong id="weather-val-rain">10%</strong></div>
+                        <div>💦 Humidity: <strong id="weather-val-humid">65%</strong></div>
+                        <div>💨 Wind: <strong id="weather-val-wind">15 kph</strong></div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="padding:1.25rem; border-left:4px solid var(--primary); background:rgba(0,0,0,0.15);">
+                    <strong style="font-size:0.9rem;">⚠️ Match Day Advisory</strong>
+                    <p id="weather-val-advisory" style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.25rem; line-height:1.4;">
+                        Sunny weather conditions today. Stay hydrated, buy caps and drink water at Zone NC/SC!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Multi-hour Forecast list -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap:1.25rem;">
+                <h2 class="section-title">⏱️ Hourly Forecast</h2>
+                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+                    Match-day progression forecast:
+                </p>
+
+                <ul class="info-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <li class="info-item" style="justify-content:space-between; align-items:center;">
+                        <span>18:00 (Gates Open)</span>
+                        <strong>☀️ 29°C | 10% Rain</strong>
+                    </li>
+                    <li class="info-item" style="justify-content:space-between; align-items:center;">
+                        <span>20:00 (First Innings)</span>
+                        <strong>☀️ 27°C | 10% Rain</strong>
+                    </li>
+                    <li class="info-item" style="justify-content:space-between; align-items:center;">
+                        <span>22:00 (Second Innings)</span>
+                        <strong>⛅ 25°C | 15% Rain</strong>
+                    </li>
+                    <li class="info-item" style="justify-content:space-between; align-items:center;">
+                        <span>23:30 (Match Close)</span>
+                        <strong>☁️ 24°C | 20% Rain</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="/static/js/weather.js"></script>
+</body>
+</html>

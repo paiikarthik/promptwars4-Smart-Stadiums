@@ -1,0 +1,4 @@
+/* Map visual overrides */
+#map-canvas {
+    background: rgba(0,0,0,0.15);
+}

@@ -1,0 +1,4 @@
+/* Weather panel specific styles */
+#weather-val-temp {
+    text-shadow: 0 4px 10px rgba(250,204,21,0.25);
+}

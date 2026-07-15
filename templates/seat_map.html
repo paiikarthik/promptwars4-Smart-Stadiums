@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Stadium Seat Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="/static/css/seat_map.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🎟️</span> ArenaFlow | Seat Viewer
+        </div>
+        <div class="nav-user">
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Seating KPIs -->
+        <div class="kpi-grid">
+            <div class="glass-card kpi-card">
+                <div class="kpi-title" data-translate="lbl_capacity">Total Capacity</div>
+                <div class="kpi-value" id="seat-capacity">70,000</div>
+                <div class="kpi-subtext">Fixed stadium seats</div>
+            </div>
+            <div class="glass-card kpi-card">
+                <div class="kpi-title" data-translate="lbl_seats_booked">Booked Seats</div>
+                <div class="kpi-value" id="seat-booked" style="color: var(--warning);">56,210</div>
+                <div class="kpi-subtext" id="seat-occupancy-pct">80.3% Occupancy</div>
+            </div>
+            <div class="glass-card kpi-card">
+                <div class="kpi-title" data-translate="lbl_seats_avail">Available Seats</div>
+                <div class="kpi-value" id="seat-avail" style="color: var(--success);">13,790</div>
+                <div class="kpi-subtext">Open for reservations</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Section details & Seating Grid -->
+            <div class="glass-card dashboard-section" style="display:flex; flex-direction:column; gap: 1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                    <div>
+                        <h2 class="section-title">🏟️ Interactive Seating Grid</h2>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.25rem;">
+                            Select a stadium stand to view live booked and available seats.
+                        </p>
+                    </div>
+                    <!-- Stand Select -->
+                    <select id="section-select" class="toggle-btn" onchange="loadStandGrid(this.value)" style="width:auto; min-width:200px;">
+                        <!-- Options loaded dynamically -->
+                        <option value="">Loading Stands...</option>
+                    </select>
+                </div>
+
+                <!-- Legend -->
+                <div style="display:flex; gap:1.5rem; font-size:0.85rem; flex-wrap:wrap; border-bottom:1px solid var(--glass-border); padding-bottom:1rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="display:inline-block; width:16px; height:16px; background:#475569; border-radius:4px;"></span> Available
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="display:inline-block; width:16px; height:16px; background:#ef4444; border-radius:4px;"></span> Booked
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="display:inline-block; width:16px; height:16px; background:#eab308; border-radius:4px;"></span> VIP Gold
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="display:inline-block; width:16px; height:16px; background:#3b82f6; border-radius:4px; display:flex; align-items:center; justify-content:center; color:white; font-size:0.6rem;">♿</span> Accessible
+                    </div>
+                </div>
+
+                <!-- Grid Canvas -->
+                <div id="seating-canvas" class="seating-grid-container" style="display:grid; gap:0.4rem; justify-content:center; max-height:450px; overflow-y:auto; padding:1rem; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid var(--glass-border);">
+                    <!-- Dynamic seats populated here -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Info card -->
+            <div class="glass-card dashboard-section" style="height:fit-content; display:flex; flex-direction:column; gap:1.25rem;">
+                <h2 class="section-title">🎟️ Seat Details</h2>
+                <div id="seat-details-card" class="glass-card" style="padding:1.5rem; background:rgba(0,0,0,0.15); display:flex; flex-direction:column; gap:0.75rem;">
+                    <p style="opacity:0.6; text-align:center; padding: 2rem 0;">Click on any seat in the grid to inspect ticketing parameters.</p>
+                </div>
+                
+                <div class="glass-card" style="padding:1rem; border-left:4px solid var(--info); font-size:0.85rem; line-height:1.5; background:rgba(0,0,0,0.15);">
+                    <strong>💡 Accessibility Note</strong>
+                    <p style="color:var(--text-secondary); margin-top:0.25rem;">
+                        South Stand D is equipped with ramps, extra-wide aisles, and dedicated companion spaces. Assistive routing is active.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="/static/js/seat_map.js"></script>
+</body>
+</html>

@@ -11,63 +11,69 @@
             "password_hash": "scrypt:32768:8:1$TU1MkGVhqCxOLEFu$ad4d027cb20c028c3a27e5bb14ed87fbbb545e2c3a5cec68bc48d20d43fee89cc33124ae1e9086abe39ff9baa6f06837f88b753b002ed5bc6b0702714c89b4df",
             "role": "admin",
             "created_at": 1784117790.890314
+        },
+        "dev": {
+            "username": "dev",
+            "password_hash": "scrypt:32768:8:1$li0zSV1Ya1plAABv$a17382b3289ee1637ae7506174c6c7cd880a412ef1ae8d4edb4f5f5bf4e705b16903f676a585edc454aa91f808cb5ee57c451716bf76f453e437ce47f6e164a6",
+            "role": "attendee",
+            "created_at": 1784124149.5441742
         }
     },
     "simulation_state": {
-        "occupancy": 69355,
+        "occupancy": 69393,
         "capacity": 70000,
         "gates": [
             {
                 "id": "gate-n",
                 "name": "North Gate",
-                "waitTimeMinutes": 39
+                "waitTimeMinutes": 26
             },
             {
                 "id": "gate-s",
                 "name": "South Gate",
-                "waitTimeMinutes": 19
+                "waitTimeMinutes": 4
             },
             {
                 "id": "gate-e",
                 "name": "East Gate",
-                "waitTimeMinutes": 38
+                "waitTimeMinutes": 20
             },
             {
                 "id": "gate-w",
                 "name": "West Gate",
-                "waitTimeMinutes": 10
+                "waitTimeMinutes": 20
             }
         ],
         "zones": [
             {
                 "id": "zone-nc",
                 "name": "North Concourse",
-                "crowdLevel": 74
+                "crowdLevel": 78
             },
             {
                 "id": "zone-sc",
                 "name": "South Concourse",
-                "crowdLevel": 13
+                "crowdLevel": 85
             },
             {
                 "id": "zone-food",
                 "name": "Food Court A",
-                "crowdLevel": 11
+                "crowdLevel": 6
             },
             {
                 "id": "zone-merch",
                 "name": "Merch Stand",
-                "crowdLevel": 99
+                "crowdLevel": 87
             },
             {
                 "id": "zone-vip",
                 "name": "VIP Lounge",
-                "crowdLevel": 92
+                "crowdLevel": 70
             },
             {
                 "id": "zone-main",
                 "name": "Main Entrance",
-                "crowdLevel": 50
+                "crowdLevel": 13
             }
         ],
         "amenities": [
@@ -75,25 +81,25 @@
                 "id": "am-rest-main",
                 "name": "Main Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 15
+                "waitTimeMinutes": 27
             },
             {
                 "id": "am-rest-north",
                 "name": "North Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 5
+                "waitTimeMinutes": 8
             },
             {
                 "id": "am-food-pizza",
                 "name": "Pizza Stand",
                 "type": "food",
-                "waitTimeMinutes": 28
+                "waitTimeMinutes": 20
             },
             {
                 "id": "am-food-drinks",
                 "name": "Drinks Tent",
                 "type": "food",
-                "waitTimeMinutes": 8
+                "waitTimeMinutes": 18
             }
         ],
         "staff": {

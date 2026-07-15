@@ -1,0 +1,4 @@
+/* Indian translation pack overrides */
+body[dir="rtl"] select, body[dir="rtl"] input {
+    text-align: right;
+}
