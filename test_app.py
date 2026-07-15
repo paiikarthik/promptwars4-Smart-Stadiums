@@ -155,5 +155,118 @@ class StadiumIQTest(unittest.TestCase):
         response = self.client.get("/admin")
         self.assertEqual(response.status_code, 302) # Redirects back to dashboard
 
+    def test_new_extensions_flow(self):
+        """Test all 15 new modular extensions (SOS, Predictions, Analytics, Feedback, Lost & Found, Parking)."""
+        # Register and login as admin to test admin-only endpoints
+        from werkzeug.security import generate_password_hash
+        db.register_user("admin_user", generate_password_hash("adminpass"), "admin")
+        self.client.post("/api/auth/login",
+                         data=json.dumps({"username": "admin_user", "password": "adminpass"}),
+                         content_type="application/json")
+
+        # 1. Predictions API
+        response = self.client.get("/api/predictions")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("5_min", data["predictions"])
+        self.assertIn("10_min", data["predictions"])
+        self.assertIn("30_min", data["predictions"])
+
+        # 2. Analytics API
+        response = self.client.get("/api/analytics/data")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("summary", data["metrics"])
+        self.assertIn("crowdTrends", data["metrics"])
+
+        # 3. Fan Feedback API
+        feedback_payload = {
+            "scores": {
+                "navigation": 4,
+                "food": 5,
+                "restrooms": 3,
+                "security": 5,
+                "ai_assistant": 4
+            },
+            "comments": "Great AI helper, food queues were a bit long."
+        }
+        response = self.client.post("/api/feedback/submit",
+                                    data=json.dumps(feedback_payload),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        
+        # Test feedback summary
+        response = self.client.get("/api/feedback/summary")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("summary", data)
+
+        # 4. Emergency SOS API
+        sos_payload = {
+            "seat": "Row F Seat 42",
+            "zone_id": "zone-food"
+        }
+        response = self.client.post("/api/sos/send",
+                                    data=json.dumps(sos_payload),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        sos_id = data["sos"]["id"]
+        
+        # Test SOS list
+        response = self.client.get("/api/sos/list")
+        self.assertEqual(response.status_code, 200)
+        
+        # Test SOS status update
+        response = self.client.post("/api/sos/update",
+                                    data=json.dumps({"id": sos_id, "status": "Accepted"}),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        # 5. Lost & Found API
+        lf_payload = {
+            "item_type": "Phone",
+            "description": "Black iPhone 13 in food concourse",
+            "location": "Food Court A",
+            "contact": "555-9088"
+        }
+        response = self.client.post("/api/lost-found/submit",
+                                    data=json.dumps(lf_payload),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        item_id = data["item"]["id"]
+
+        # Search Lost & Found
+        response = self.client.get("/api/lost-found/search?q=Phone")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(len(data["items"]) >= 1)
+
+        # Update item to Claimed
+        response = self.client.post("/api/lost-found/update",
+                                    data=json.dumps({"id": item_id, "status": "Claimed"}),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        # 6. Parking Management API
+        response = self.client.get("/api/parking")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(len(data["parking"]) == 3)
+
+        # 7. AI Operations Copilot API
+        response = self.client.post("/api/copilot/chat",
+                                    data=json.dumps({"message": "What caused today's congestion?"}),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertIn("message", data)
+
+        # 8. Incident Reports PDF API
+        response = self.client.get("/api/reports/incident/pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+
 if __name__ == "__main__":
     unittest.main()

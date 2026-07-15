@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Notification Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🔔</span> ArenaFlow | Notifications
+        </div>
+        <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
+            {% if session.get('role') == 'admin' %}
+            <a href="/admin" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Command Center</a>
+            {% else %}
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <div class="glass-card dashboard-section">
+            <h2 class="section-title">🕒 Chronological Operations Log & History</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; margin-top: 0.5rem;">
+                Searchable history of all alerts, dispatches, crowd changes, broadcasts, and AI decisions:
+            </p>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <input type="text" id="log-search" class="form-input" placeholder="Search notification content (e.g. Food Court or Gate)" oninput="filterLogs()" autocomplete="off">
+            </div>
+
+            <ul class="info-list" id="log-container" style="max-height: 550px; overflow-y: auto; padding-right: 0.5rem;">
+                <!-- Logs loaded dynamically -->
+                <li class="info-item">Loading timeline logs...</li>
+            </ul>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    <script>
+        let allLogs = [];
+
+        async function loadNotificationLogs() {
+            try {
+                const response = await fetch("/api/notifications/history");
+                const data = await response.json();
+                if (response.ok) {
+                    allLogs = data.history;
+                    renderLogs(allLogs);
+                }
+            } catch (e) {
+                console.error("Error loading logs", e);
+            }
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById("log-container");
+            if (!container) return;
+
+            if (logs.length === 0) {
+                container.innerHTML = `<li class="info-item" style="color:var(--text-muted);">No timeline logs match the filter.</li>`;
+                return;
+            }
+
+            container.innerHTML = logs.map(l => {
+                let badgeClass = "badge-clear";
+                if (l.type === "danger" || l.type === "medical") badgeClass = "badge-danger";
+                if (l.type === "warning" || l.type === "security") badgeClass = "badge-warning";
+                
+                const timeString = new Date(l.timestamp * 1000).toLocaleTimeString();
+
+                return `
+                    <li class="info-item" style="justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div>
+                            <span style="font-size:0.75rem; color:var(--text-muted); display:inline-block; width: 80px;">${timeString}</span>
+                            <span style="font-weight: 500;">${l.message}</span>
+                        </div>
+                        <span class="item-value ${badgeClass}" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 50px;">
+                            ${l.type.toUpperCase()}
+                        </span>
+                    </li>
+                `;
+            }).join("");
+        }
+
+        function filterLogs() {
+            const query = document.getElementById("log-search").value.toLowerCase();
+            const filtered = allLogs.filter(l => l.message.toLowerCase().includes(query) || l.type.toLowerCase().includes(query));
+            renderLogs(filtered);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadNotificationLogs();
+            // Refresh logs every 10 seconds
+            setInterval(loadNotificationLogs, 10000);
+        });
+    </script>
+</body>
+</html>

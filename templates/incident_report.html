@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | AI Operations Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .hc-btn-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .hc-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        .hc-btn:hover, .hc-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>📊</span> ArenaFlow | AI Reports
+        </div>
+        <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="hc-btn" style="padding: 0.35rem 0.5rem;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
+            <a href="/admin" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Command Center</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div class="hc-btn-group">
+            <button class="hc-btn" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="hc-btn" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="hc-btn" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Report Generator -->
+            <div>
+                <div class="glass-card dashboard-section">
+                    <h2 class="section-title">📋 AI Incident Report Generator</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Compile operations data and generate a grounded, executive summary using Gemini.
+                    </p>
+                    
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                        <button class="btn-submit" onclick="generateAIReport()" style="margin-top: 0; flex: 1; min-width: 200px;">
+                            ⚡ Generate Operations Report
+                        </button>
+                        <a id="btn-download-pdf" href="/api/reports/incident/pdf" class="btn-submit" style="margin-top: 0; flex: 1; min-width: 200px; text-decoration: none; text-align: center; background: linear-gradient(135deg, var(--info), var(--primary)); display: none;">
+                            📥 Export Report PDF
+                        </a>
+                        <a href="/api/reports/match-summary/pdf" class="btn-submit" style="margin-top: 0; flex: 1; min-width: 200px; text-decoration: none; text-align: center; background: linear-gradient(135deg, var(--accent), var(--primary));">
+                            🏆 Export Match Summary PDF
+                        </a>
+                    </div>
+
+                    <!-- AI Report Output Box -->
+                    <div id="ai-report-output" class="glass-card" style="padding: 1.5rem; background: rgba(0,0,0,0.25); min-height: 250px; line-height: 1.6;">
+                        <p style="opacity: 0.5; text-align: center; margin-top: 100px;">
+                            Click the button above to generate a new live operations incident report.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: AI Copilot Chat -->
+            <div class="glass-card chat-container">
+                <div class="chat-header">
+                    <div class="chat-avatar">🚀</div>
+                    <div class="chat-status">
+                        <h3>AI Operations Copilot</h3>
+                        <p>Real-Time Admin Advisory</p>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="copilot-messages">
+                    <div class="chat-msg bot">
+                        <p>Welcome to the Ops Copilot. I can query alerts history, staff dispatches, and crowd density. Try asking:</p>
+                        <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+                            <li style="cursor:pointer; text-decoration:underline;" onclick="copilotQuickQuery('What caused today\'s congestion?')">"What caused today's congestion?"</li>
+                            <li style="cursor:pointer; text-decoration:underline;" onclick="copilotQuickQuery('Which gate had highest wait?')">"Which gate had highest wait?"</li>
+                            <li style="cursor:pointer; text-decoration:underline;" onclick="copilotQuickQuery('Generate staffing recommendations.')">"Generate staffing recommendations."</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <form class="chat-input-area" onsubmit="handleCopilotSubmit(event)">
+                    <input type="text" id="copilot-input" class="chat-input" placeholder="Ask about staffing, gates, or congestion reasons..." required autocomplete="off">
+                    <button type="submit" class="btn-send">➔</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    <script>
+        async function generateAIReport() {
+            const output = document.getElementById("ai-report-output");
+            const dlBtn = document.getElementById("btn-download-pdf");
+            
+            output.innerHTML = "<p style='opacity:0.6; text-align:center; margin-top: 100px;'>Compiling statistics and prompting Gemini...</p>";
+            if (dlBtn) dlBtn.style.display = "none";
+
+            try {
+                const response = await fetch("/api/reports/incident");
+                const data = await response.json();
+                if (response.ok) {
+                    // Render markdown nicely
+                    let formatted = data.report
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/###\s(.*?)\n/g, '<h3>$1</h3>')
+                        .replace(/\*\s(.*?)\n/g, '<li>$1</li>')
+                        .replace(/\n\n/g, '<p></p>');
+                    if (formatted.includes('<li>')) {
+                        formatted = formatted.replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>');
+                    }
+                    output.innerHTML = formatted;
+                    if (dlBtn) dlBtn.style.display = "inline-block";
+                } else {
+                    output.innerHTML = "<p style='color:var(--danger);'>Failed to compile incident metrics.</p>";
+                }
+            } catch (e) {
+                output.innerHTML = "<p style='color:var(--danger);'>Error communicating with the report generator.</p>";
+            }
+        }
+    </script>
+</body>
+</html>

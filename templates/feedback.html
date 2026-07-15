@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Fan Feedback</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .rating-stars {
+            display: flex;
+            gap: 0.25rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .star-item {
+            color: var(--text-muted);
+            transition: var(--transition-smooth);
+        }
+        .star-item:hover {
+            transform: scale(1.15);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>💬</span> ArenaFlow | Feedback
+        </div>
+        <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Rating Form -->
+            <div class="glass-card dashboard-section">
+                <h2 class="section-title">⭐ Attendee Satisfaction Survey</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 2.0rem; margin-top: 0.5rem;">
+                    Your ratings help the ArenaFlow operations team deploy staff and redirect congestion bottlenecks.
+                </p>
+
+                <form onsubmit="handleFeedbackSubmit(event)" style="display:flex; flex-direction:column; gap: 1.5rem;">
+                    <!-- Category: Navigation -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;">📍 Navigation & Routing</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Finding gates, paths, and clear concourses</div>
+                        </div>
+                        <div class="rating-stars">
+                            <span class="star-item" id="star-navigation-1" onclick="selectStarRating('navigation', 1)">★</span>
+                            <span class="star-item" id="star-navigation-2" onclick="selectStarRating('navigation', 2)">★</span>
+                            <span class="star-item" id="star-navigation-3" onclick="selectStarRating('navigation', 3)">★</span>
+                            <span class="star-item" id="star-navigation-4" onclick="selectStarRating('navigation', 4)">★</span>
+                            <span class="star-item" id="star-navigation-5" onclick="selectStarRating('navigation', 5)">★</span>
+                        </div>
+                    </div>
+
+                    <!-- Category: Food -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;">🍕 Food Stand Queues</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Wait times and service at drinks/pizza stands</div>
+                        </div>
+                        <div class="rating-stars">
+                            <span class="star-item" id="star-food-1" onclick="selectStarRating('food', 1)">★</span>
+                            <span class="star-item" id="star-food-2" onclick="selectStarRating('food', 2)">★</span>
+                            <span class="star-item" id="star-food-3" onclick="selectStarRating('food', 3)">★</span>
+                            <span class="star-item" id="star-food-4" onclick="selectStarRating('food', 4)">★</span>
+                            <span class="star-item" id="star-food-5" onclick="selectStarRating('food', 5)">★</span>
+                        </div>
+                    </div>
+
+                    <!-- Category: Restrooms -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;">🚻 Restrooms & Cleanliness</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Availability and queue times of concourse washrooms</div>
+                        </div>
+                        <div class="rating-stars">
+                            <span class="star-item" id="star-restrooms-1" onclick="selectStarRating('restrooms', 1)">★</span>
+                            <span class="star-item" id="star-restrooms-2" onclick="selectStarRating('restrooms', 2)">★</span>
+                            <span class="star-item" id="star-restrooms-3" onclick="selectStarRating('restrooms', 3)">★</span>
+                            <span class="star-item" id="star-restrooms-4" onclick="selectStarRating('restrooms', 4)">★</span>
+                            <span class="star-item" id="star-restrooms-5" onclick="selectStarRating('restrooms', 5)">★</span>
+                        </div>
+                    </div>
+
+                    <!-- Category: Security -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;">🛡️ Security & Venue Safety</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Staff presence, gate checks, and general safety</div>
+                        </div>
+                        <div class="rating-stars">
+                            <span class="star-item" id="star-security-1" onclick="selectStarRating('security', 1)">★</span>
+                            <span class="star-item" id="star-security-2" onclick="selectStarRating('security', 2)">★</span>
+                            <span class="star-item" id="star-security-3" onclick="selectStarRating('security', 3)">★</span>
+                            <span class="star-item" id="star-security-4" onclick="selectStarRating('security', 4)">★</span>
+                            <span class="star-item" id="star-security-5" onclick="selectStarRating('security', 5)">★</span>
+                        </div>
+                    </div>
+
+                    <!-- Category: AI Assistant -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem;">🤖 AI Concierge Chatbot</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">Answer speed, telemetry grounding accuracy, and tips</div>
+                        </div>
+                        <div class="rating-stars">
+                            <span class="star-item" id="star-ai_assistant-1" onclick="selectStarRating('ai_assistant', 1)">★</span>
+                            <span class="star-item" id="star-ai_assistant-2" onclick="selectStarRating('ai_assistant', 2)">★</span>
+                            <span class="star-item" id="star-ai_assistant-3" onclick="selectStarRating('ai_assistant', 3)">★</span>
+                            <span class="star-item" id="star-ai_assistant-4" onclick="selectStarRating('ai_assistant', 4)">★</span>
+                            <span class="star-item" id="star-ai_assistant-5" onclick="selectStarRating('ai_assistant', 5)">★</span>
+                        </div>
+                    </div>
+
+                    <!-- Comments Text Box -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label class="form-label" for="feedback-comments">Comments & Observations</label>
+                        <textarea id="feedback-comments" class="form-input" rows="4" placeholder="How was your venue experience today? Any queue bottlenecks or comments on staff dispatches?" style="resize:none; font-family:inherit;"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit" style="margin-top:0.5rem;">Submit Survey</button>
+                </form>
+            </div>
+
+            <!-- Right Panel: Operations Summary -->
+            <div class="glass-card dashboard-section" style="height: fit-content;">
+                <h2 class="section-title">📊 Analytics Sentiment Summary</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 1.5rem;">
+                    Operations Analyst summary generated by Gemini compiling overall fan feedback metrics:
+                </p>
+                <div id="feedback-summary-container" class="glass-card" style="padding: 1.5rem; background: rgba(0,0,0,0.25); min-height: 200px; line-height: 1.5;">
+                    <!-- AI Feedback summary loaded dynamically -->
+                    <p style="opacity: 0.6;">Loading operations analyst view...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/features.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Select default 5-stars visual highlights
+            selectStarRating('navigation', 5);
+            selectStarRating('food', 5);
+            selectStarRating('restrooms', 5);
+            selectStarRating('security', 5);
+            selectStarRating('ai_assistant', 5);
+            
+            loadFeedbackSummary();
+        });
+    </script>
+</body>
+</html>

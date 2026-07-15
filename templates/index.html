@@ -3,16 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StadiumIQ | Fan Dashboard</title>
+    <title>ArenaFlow | Fan Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .nav-links-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+        .nav-link-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 0.6rem 1.25rem;
+            border-radius: 50px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        .nav-link-item:hover {
+            border-color: var(--primary);
+            color: white;
+            background: rgba(99, 102, 241, 0.1);
+        }
+        /* Floating SOS Button */
+        .btn-sos-floating {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 20px var(--danger-glow);
+            font-size: 1.5rem;
+            font-weight: 800;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-smooth);
+            animation: pulse-sos 2s infinite;
+        }
+        .btn-sos-floating:hover {
+            transform: scale(1.1);
+            background: #ff3333;
+        }
+        @keyframes pulse-sos {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        /* Modal Backdrop */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+        .modal-box {
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+        }
+    </style>
 </head>
 <body>
     <!-- Top Navigation Bar -->
     <header class="glass-card navbar">
         <div class="brand">
-            <span>🏟️</span> StadiumIQ | Fan Hub
+            <span>🏟️</span> ArenaFlow | Fan Hub
         </div>
         <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="nav-link-item" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
             <div class="user-badge" id="lbl-username">
                 {{ username }}
             </div>
@@ -21,6 +105,22 @@
     </header>
 
     <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <!-- Navigation Links Bar to New Modular Features -->
+        <div class="nav-links-bar">
+            <a href="/parking" class="nav-link-item" data-translate="nav_parking">Parking Hub</a>
+            <a href="/lost-found" class="nav-link-item" data-translate="nav_lost_found">Lost & Found</a>
+            <a href="/notifications" class="nav-link-item" data-translate="nav_notifications">Notifications</a>
+            <a href="/feedback" class="nav-link-item" data-translate="nav_feedback">Fan Feedback</a>
+            <div class="nav-link-item" onclick="toggleMerchModal(true)" data-translate="nav_merch_store">Merch Store</div>
+        </div>
+
         <!-- Live Notifications Banner -->
         <div id="live-alert" class="notification-banner" style="display: none;">
             <div class="notification-content">
@@ -30,7 +130,6 @@
                     <p id="alert-message">Wait times at Gate East are peaking at 22 mins.</p>
                 </div>
             </div>
-            <!-- Dismiss button or automatic -->
         </div>
 
         <div class="dashboard-grid">
@@ -39,63 +138,85 @@
                 <!-- KPI cards -->
                 <div class="kpi-grid">
                     <div class="glass-card kpi-card">
-                        <div class="kpi-title">Stadium Occupancy</div>
+                        <div class="kpi-title" data-translate="lbl_occupancy">Stadium Occupancy</div>
                         <div class="kpi-value" id="kpi-occupancy">0</div>
                         <div class="kpi-subtext" id="kpi-capacity-total">Capacity: 70,000</div>
                     </div>
                     <div class="glass-card kpi-card">
-                        <div class="kpi-title">Fastest Gate</div>
+                        <div class="kpi-title" data-translate="lbl_fastest_gate">Fastest Gate</div>
                         <div class="kpi-value" id="kpi-fastest-gate">-</div>
                         <div class="kpi-subtext" id="kpi-fastest-gate-time">Wait time: - mins</div>
                     </div>
                     <div class="glass-card kpi-card">
-                        <div class="kpi-title">Congested Concourse</div>
+                        <div class="kpi-title" data-translate="lbl_congested_zone">Congested Concourse</div>
                         <div class="kpi-value" id="kpi-congested-zone">-</div>
                         <div class="kpi-subtext" id="kpi-congested-level">Density: -%</div>
                     </div>
                 </div>
 
+                <!-- Weather widget Advisory -->
+                <div class="glass-card dashboard-section" style="margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+                    <div>
+                        <h2 class="section-title" data-translate="lbl_weather">☀️ Weather Advisory</h2>
+                        <p id="weather-advisory" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Weather is clear & warm. Grab a bottle of water and enjoy the match!
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 1.5rem; text-align: center;">
+                        <div>
+                            <div id="weather-temp" style="font-size: 1.8rem; font-weight: 800; color: var(--warning);">26°C</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Temperature</div>
+                        </div>
+                        <div>
+                            <div id="weather-rain" style="font-size: 1.1rem; font-weight: 700; color: var(--info); margin-top: 0.4rem;">🌧️ 10%</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Rain Chance</div>
+                        </div>
+                        <div>
+                            <div id="weather-wind" style="font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); margin-top: 0.4rem;">💨 12 kph</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Wind</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Smart Pathfinder Quick Actions -->
                 <div class="glass-card dashboard-section">
-                    <h2 class="section-title">📍 Smart Pathfinder</h2>
+                    <h2 class="section-title" data-translate="lbl_smart_pathfinder">📍 Smart Pathfinder</h2>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
                         Click a shortcut to query the routing engine and find the shortest lines instantly:
                     </p>
                     <div class="pathfinder-actions">
                         <div class="action-card" onclick="quickQuery('Which gate is fastest to enter?')">
                             <div class="action-icon">🚀</div>
-                            <div class="action-label">Fastest Entry</div>
+                            <div class="action-label" data-translate="lbl_fastest_exit">Fastest Entry</div>
                             <div class="action-value" id="action-gate">Querying...</div>
                         </div>
                         <div class="action-card" onclick="quickQuery('What washroom should I use right now?')">
                             <div class="action-icon">🚻</div>
-                            <div class="action-label">Nearest Washroom</div>
+                            <div class="action-label" data-translate="lbl_nearest_restroom">Nearest Restroom</div>
                             <div class="action-value" id="action-restroom">Querying...</div>
                         </div>
                         <div class="action-card" onclick="quickQuery('Where can I grab food with the shortest queue?')">
                             <div class="action-icon">🍕</div>
-                            <div class="action-label">Food & Drink</div>
+                            <div class="action-label" data-translate="lbl_food_drink">Food & Drink</div>
                             <div class="action-value" id="action-food">Querying...</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Grid splitting Gates, Concourses, Washrooms and Food -->
-                <div class="details-split">
+                <div class="details-split" style="margin-top: 1.5rem;">
                     <!-- Gates Live Wait Times -->
                     <div class="glass-card dashboard-section">
-                        <h2 class="section-title">Live Gate Wait Times</h2>
+                        <h2 class="section-title" data-translate="lbl_live_gate_times">Live Gate Wait Times</h2>
                         <ul class="info-list" id="list-gates">
-                            <!-- Populated dynamically -->
                             <li class="info-item">Loading...</li>
                         </ul>
                     </div>
 
                     <!-- Live Concourses Density -->
                     <div class="glass-card dashboard-section">
-                        <h2 class="section-title">Live Zone Density</h2>
+                        <h2 class="section-title" data-translate="lbl_live_zone_status">Live Zone Status</h2>
                         <ul class="info-list" id="list-zones">
-                            <!-- Populated dynamically -->
                             <li class="info-item">Loading...</li>
                         </ul>
                     </div>
@@ -103,7 +224,7 @@
 
                 <!-- Amenities split -->
                 <div class="glass-card dashboard-section" style="margin-top: 1.5rem;">
-                    <h2 class="section-title">Amenities & Queues</h2>
+                    <h2 class="section-title" data-translate="lbl_amenities_queues">Amenities & Queues</h2>
                     <div class="details-split">
                         <div>
                             <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">🚻 Restrooms</h3>
@@ -126,7 +247,7 @@
                 <div class="chat-header">
                     <div class="chat-avatar">🤖</div>
                     <div class="chat-status">
-                        <h3>Stadium Concierge</h3>
+                        <h3 data-translate="lbl_stadium_concierge">Stadium Concierge</h3>
                         <p>Powered by Gemini AI (Grounded)</p>
                     </div>
                 </div>
@@ -139,19 +260,101 @@
 
                 <form class="chat-input-area" onsubmit="handleChatSubmit(event)">
                     <input type="text" id="chat-input" class="chat-input" placeholder="Ask about wait times, gates, restrooms..." required autocomplete="off">
-                    <button type="submit" class="btn-send">➔</button>
+                    <button type="submit" class="btn-send" data-translate="btn_chat_send">➔</button>
                 </form>
             </div>
         </div>
     </main>
 
-    <!-- Frontend Scripting -->
+    <!-- Floating SOS Button -->
+    <button class="btn-sos-floating" onclick="toggleSOSModal(true)">SOS</button>
+
+    <!-- Emergency SOS Modal -->
+    <div id="sos-modal" class="modal-backdrop">
+        <div class="glass-card modal-box">
+            <h2 style="color:var(--danger); display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">🚨 Trigger Emergency SOS</h2>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+                State your seat and zone. Security/medical personnel will dispatch immediately.
+            </p>
+            <form onsubmit="handleSOSSubmit(event)" style="display:flex; flex-direction:column; gap:1.25rem;">
+                <div class="form-group">
+                    <label class="form-label" for="sos-seat">Seat Location / Row</label>
+                    <input type="text" id="sos-seat" class="form-input" placeholder="e.g. Row 10 Seat 15" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="sos-zone">Concourse Zone</label>
+                    <select id="sos-zone" class="form-input" required>
+                        <option value="zone-nc">North Concourse</option>
+                        <option value="zone-sc">South Concourse</option>
+                        <option value="zone-food">Food Court A</option>
+                        <option value="zone-merch">Merch Stand</option>
+                        <option value="zone-vip">VIP Lounge</option>
+                        <option value="zone-main">Main Entrance</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:1rem; margin-top:0.5rem;">
+                    <button type="button" class="btn-logout" style="flex:1;" onclick="toggleSOSModal(false)">Cancel</button>
+                    <button type="submit" class="btn-submit" style="flex:1; margin-top:0; background:var(--danger); box-shadow: 0 4px 15px var(--danger-glow);">Send SOS Alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Merchandise Store Catalog Modal -->
+    <div id="merch-modal" class="modal-backdrop">
+        <div class="glass-card modal-box" style="max-width: 600px;">
+            <h2 style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.5rem;">🛍️ ArenaFlow Merch Store</h2>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.5rem;">
+                Browse official ArenaFlow merchandise catalog. Collect items from the Merch Stand at Zone Merch Concourse!
+            </p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; max-height: 350px; overflow-y:auto; padding-right:0.25rem;">
+                <div class="glass-card" style="padding:1rem; text-align:center;">
+                    <div style="font-size:2.5rem; margin-bottom:0.5rem;">👕</div>
+                    <h4 style="font-weight:700;">Official Jersey</h4>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Classic Team Blue Jersey</p>
+                    <button class="btn-dispatch security" style="margin-top:0.75rem;" onclick="alert('Item reserved! Pick up at Merch Stand in Zone Merch.')">Reserve Item</button>
+                </div>
+                <div class="glass-card" style="padding:1rem; text-align:center;">
+                    <div style="font-size:2.5rem; margin-bottom:0.5rem;">🧢</div>
+                    <h4 style="font-weight:700;">Team Cap</h4>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Adjustable snapback cap</p>
+                    <button class="btn-dispatch security" style="margin-top:0.75rem;" onclick="alert('Item reserved! Pick up at Merch Stand in Zone Merch.')">Reserve Item</button>
+                </div>
+                <div class="glass-card" style="padding:1rem; text-align:center;">
+                    <div style="font-size:2.5rem; margin-bottom:0.5rem;">🚩</div>
+                    <h4 style="font-weight:700;">Cheering Flag</h4>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Premium ArenaFlow stadium flag</p>
+                    <button class="btn-dispatch security" style="margin-top:0.75rem;" onclick="alert('Item reserved! Pick up at Merch Stand in Zone Merch.')">Reserve Item</button>
+                </div>
+                <div class="glass-card" style="padding:1rem; text-align:center;">
+                    <div style="font-size:2.5rem; margin-bottom:0.5rem;">🥤</div>
+                    <h4 style="font-weight:700;">Squeeze Bottle</h4>
+                    <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Insulated thermal sports bottle</p>
+                    <button class="btn-dispatch security" style="margin-top:0.75rem;" onclick="alert('Item reserved! Pick up at Merch Stand in Zone Merch.')">Reserve Item</button>
+                </div>
+            </div>
+            <button class="btn-logout" style="width:100%;" onclick="toggleMerchModal(false)">Close Store</button>
+        </div>
+    </div>
+
+    <!-- JS Scripts -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/features.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
     <script>
-        // Start streaming state immediately
         document.addEventListener('DOMContentLoaded', () => {
             initDashboardStream();
+            loadWeatherWidget();
+            
+            // Poll weather every 30 seconds
+            setInterval(loadWeatherWidget, 30000);
         });
+
+        function toggleMerchModal(show) {
+            const modal = document.getElementById("merch-modal");
+            if (modal) modal.style.display = show ? "flex" : "none";
+        }
     </script>
 </body>
 </html>

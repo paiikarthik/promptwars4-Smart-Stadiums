@@ -14,55 +14,55 @@
         }
     },
     "simulation_state": {
-        "occupancy": 69773,
+        "occupancy": 70000,
         "capacity": 70000,
         "gates": [
             {
                 "id": "gate-n",
                 "name": "North Gate",
-                "waitTimeMinutes": 30
+                "waitTimeMinutes": 36
             },
             {
                 "id": "gate-s",
                 "name": "South Gate",
-                "waitTimeMinutes": 24
+                "waitTimeMinutes": 31
             },
             {
                 "id": "gate-e",
                 "name": "East Gate",
-                "waitTimeMinutes": 25
+                "waitTimeMinutes": 43
             },
             {
                 "id": "gate-w",
                 "name": "West Gate",
-                "waitTimeMinutes": 15
+                "waitTimeMinutes": 27
             }
         ],
         "zones": [
             {
                 "id": "zone-nc",
                 "name": "North Concourse",
-                "crowdLevel": 16
+                "crowdLevel": 79
             },
             {
                 "id": "zone-sc",
                 "name": "South Concourse",
-                "crowdLevel": 21
+                "crowdLevel": 6
             },
             {
                 "id": "zone-food",
                 "name": "Food Court A",
-                "crowdLevel": 39
+                "crowdLevel": 30
             },
             {
                 "id": "zone-merch",
                 "name": "Merch Stand",
-                "crowdLevel": 63
+                "crowdLevel": 92
             },
             {
                 "id": "zone-vip",
                 "name": "VIP Lounge",
-                "crowdLevel": 32
+                "crowdLevel": 94
             },
             {
                 "id": "zone-main",
@@ -75,35 +75,97 @@
                 "id": "am-rest-main",
                 "name": "Main Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 0
+                "waitTimeMinutes": 11
             },
             {
                 "id": "am-rest-north",
                 "name": "North Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 18
+                "waitTimeMinutes": 4
             },
             {
                 "id": "am-food-pizza",
                 "name": "Pizza Stand",
                 "type": "food",
-                "waitTimeMinutes": 28
+                "waitTimeMinutes": 29
             },
             {
                 "id": "am-food-drinks",
                 "name": "Drinks Tent",
                 "type": "food",
-                "waitTimeMinutes": 8
+                "waitTimeMinutes": 6
             }
         ],
         "staff": {
             "security": {
-                "available": 10,
-                "deployed": []
+                "available": 0,
+                "deployed": [
+                    {
+                        "zone_id": "zone-sc",
+                        "timestamp": 1784119446.4674544
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119450.6246803
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119458.4259298
+                    },
+                    {
+                        "zone_id": "zone-merch",
+                        "timestamp": 1784120070.5369034
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784120072.1131935
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784120072.6781185
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784120073.3294494
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784120075.3835702
+                    },
+                    {
+                        "zone_id": "zone-sc",
+                        "timestamp": 1784120076.8892229
+                    },
+                    {
+                        "zone_id": "zone-sc",
+                        "timestamp": 1784120077.2603943
+                    }
+                ]
             },
             "medical": {
-                "available": 5,
-                "deployed": []
+                "available": 0,
+                "deployed": [
+                    {
+                        "zone_id": "zone-sc",
+                        "timestamp": 1784119448.0836236
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119451.7420137
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119452.0193617
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119452.2731056
+                    },
+                    {
+                        "zone_id": "zone-food",
+                        "timestamp": 1784119452.9862187
+                    }
+                ]
             }
         }
     },
@@ -121,7 +183,105 @@
             "type": "success",
             "auto": false,
             "timestamp": 1784117944.76647
+        },
+        {
+            "id": "manual-1784120049.3063395",
+            "message": "Superhero is there",
+            "type": "info",
+            "auto": false,
+            "timestamp": 1784120049.3063586
         }
     ],
-    "dispatches": []
+    "dispatches": [
+        {
+            "id": "dispatch-1784119446.4719968",
+            "staff_type": "security",
+            "zone_id": "zone-sc",
+            "timestamp": 1784119446.4720066
+        },
+        {
+            "id": "dispatch-1784119448.0890884",
+            "staff_type": "medical",
+            "zone_id": "zone-sc",
+            "timestamp": 1784119448.0891037
+        },
+        {
+            "id": "dispatch-1784119450.631131",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784119450.6311448
+        },
+        {
+            "id": "dispatch-1784119451.7461796",
+            "staff_type": "medical",
+            "zone_id": "zone-food",
+            "timestamp": 1784119451.7461941
+        },
+        {
+            "id": "dispatch-1784119452.0236855",
+            "staff_type": "medical",
+            "zone_id": "zone-food",
+            "timestamp": 1784119452.023699
+        },
+        {
+            "id": "dispatch-1784119452.2771084",
+            "staff_type": "medical",
+            "zone_id": "zone-food",
+            "timestamp": 1784119452.277124
+        },
+        {
+            "id": "dispatch-1784119452.9905107",
+            "staff_type": "medical",
+            "zone_id": "zone-food",
+            "timestamp": 1784119452.9905224
+        },
+        {
+            "id": "dispatch-1784119458.4319975",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784119458.4320092
+        },
+        {
+            "id": "dispatch-1784120070.5412228",
+            "staff_type": "security",
+            "zone_id": "zone-merch",
+            "timestamp": 1784120070.5412347
+        },
+        {
+            "id": "dispatch-1784120072.117219",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784120072.1172462
+        },
+        {
+            "id": "dispatch-1784120072.6831787",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784120072.683192
+        },
+        {
+            "id": "dispatch-1784120073.3334475",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784120073.3334622
+        },
+        {
+            "id": "dispatch-1784120075.3904574",
+            "staff_type": "security",
+            "zone_id": "zone-food",
+            "timestamp": 1784120075.3904698
+        },
+        {
+            "id": "dispatch-1784120076.89296",
+            "staff_type": "security",
+            "zone_id": "zone-sc",
+            "timestamp": 1784120076.8929698
+        },
+        {
+            "id": "dispatch-1784120077.265414",
+            "staff_type": "security",
+            "zone_id": "zone-sc",
+            "timestamp": 1784120077.265429
+        }
+    ]
 }

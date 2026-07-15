@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Parking Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🚗</span> ArenaFlow | Parking
+        </div>
+        <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Parking Slots -->
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div class="glass-card dashboard-section">
+                    <h2 class="section-title">Parking Lots Status</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; margin-top: 0.5rem;">
+                        Real-time slots tracking and pedestrian transit walking times to gates:
+                    </p>
+                    
+                    <div id="parking-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <!-- Parking rows populated dynamically -->
+                        <div style="text-align: center; opacity: 0.6; padding: 2rem;">Loading parking data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Advisory -->
+            <div class="glass-card dashboard-section" style="height: fit-content;">
+                <h2 class="section-title">📢 Match Advisory</h2>
+                <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 1rem; font-size: 0.92rem; line-height: 1.5;">
+                    <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--info); background: rgba(0,0,0,0.15);">
+                        <strong>💡 Parking Suggestion</strong>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin-top: 0.25rem;">
+                            If you are entering via the <strong>North Gate</strong>, we recommend parking in <strong>Parking A</strong>. 
+                            For <strong>South Gate</strong>, park in <strong>Parking B</strong>.
+                        </p>
+                    </div>
+
+                    <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--warning); background: rgba(0,0,0,0.15);">
+                        <strong>⚠️ Congestion warning</strong>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin-top: 0.25rem;">
+                            <strong>Parking C</strong> is currently filling rapidly due to incoming traffic. 
+                            Consider using Parking B for quicker walking transit.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            loadParkingData();
+            // Refresh parking every 8 seconds
+            setInterval(loadParkingData, 8000);
+        });
+    </script>
+</body>
+</html>

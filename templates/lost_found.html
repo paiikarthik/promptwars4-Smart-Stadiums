@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArenaFlow | Lost & Found</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>📦</span> ArenaFlow | Lost & Found
+        </div>
+        <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
+            {% if session.get('role') == 'admin' %}
+            <a href="/admin" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Command Center</a>
+            {% else %}
+            <a href="/dashboard" class="btn-logout" style="text-decoration:none; padding: 0.5rem 1rem;">Back to Fan Hub</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Hidden configuration value for script role checks -->
+    <input type="hidden" id="is-admin-view" value="{% if session.get('role') == 'admin' %}true{% else %}false{% endif %}">
+
+    <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Submission Claim form -->
+            <div class="glass-card dashboard-section">
+                <h2 class="section-title">📝 Report Lost Item</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; margin-top: 0.5rem;">
+                    Submit details of your lost property so stadium security staff can check matched findings.
+                </p>
+
+                <form onsubmit="handleLostFoundSubmit(event)" style="display:flex; flex-direction:column; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="lf-type">Item Category</label>
+                        <select id="lf-type" class="form-input" required>
+                            <option value="Wallet">Wallet / Purse</option>
+                            <option value="Phone">Smart Phone / Tablet</option>
+                            <option value="Bag">Bag / Backpack</option>
+                            <option value="Passport">ID Card / Passport</option>
+                            <option value="Keys">Keys</option>
+                            <option value="Other">Other Belonging</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lf-desc">Item Description</label>
+                        <textarea id="lf-desc" class="form-input" rows="3" placeholder="Describe brand, color, contents, unique tags (e.g. Red leather wallet containing Visa card)" required style="resize:none; font-family:inherit;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lf-loc">Estimated Lost Location (Zone/Seat)</label>
+                        <input type="text" id="lf-loc" class="form-input" placeholder="e.g. Food Court A or Seat Row 12 Block N" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="lf-contact">Contact Info (Phone/Email)</label>
+                        <input type="text" id="lf-contact" class="form-input" placeholder="e.g. +1 555-0199 or email@domain.com" required autocomplete="off">
+                    </div>
+
+                    <button type="submit" class="btn-submit" style="margin-top: 0.5rem;">Register Lost Item</button>
+                </form>
+            </div>
+
+            <!-- Right Panel: Registry and search -->
+            <div class="glass-card dashboard-section" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <h2 class="section-title">🔍 Search Registry</h2>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <input type="text" id="lf-search" class="form-input" placeholder="Search by type or location (e.g. Wallet or Food Court)" oninput="handleRegistrySearch()" autocomplete="off">
+                </div>
+
+                <ul class="info-list" id="lost-found-results" style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+                    <!-- Items populated dynamically -->
+                    <li class="info-item">Loading registry...</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/features.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            loadLostFoundList();
+        });
+    </script>
+</body>
+</html>

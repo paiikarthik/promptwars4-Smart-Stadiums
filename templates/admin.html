@@ -3,16 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StadiumIQ | Command Center</title>
+    <title>ArenaFlow | Command Center</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .nav-links-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+        .nav-link-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 0.6rem 1.25rem;
+            border-radius: 50px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+        .nav-link-item:hover {
+            border-color: var(--primary);
+            color: white;
+            background: rgba(99, 102, 241, 0.1);
+        }
+    </style>
 </head>
 <body>
     <!-- Top Navigation Bar -->
     <header class="glass-card navbar">
         <div class="brand">
-            <span>🛡️</span> StadiumIQ | Command Center
+            <span>🛡️</span> ArenaFlow | Command Center
         </div>
         <div class="nav-user">
+            <!-- Language Selector -->
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="nav-link-item" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="pt">Português</option>
+                <option value="ar">العربية</option>
+            </select>
             <div class="user-badge" id="lbl-username">
                 {{ username }} (Admin)
             </div>
@@ -21,14 +54,29 @@
     </header>
 
     <main class="container">
+        <!-- Accessibility Control Widget -->
+        <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <button class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleHighContrast()">Contrast Toggle</button>
+            <button class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleLargeText()">Text Size Toggle</button>
+            <button id="btn-voice-read" class="nav-link-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: 8px;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
+        </div>
+
+        <!-- Navigation Links Bar to Administrative Features -->
+        <div class="nav-links-bar">
+            <a href="/incident-report" class="nav-link-item" data-translate="nav_reports">Incident Reports</a>
+            <a href="/analytics" class="nav-link-item" data-translate="nav_analytics">Analytics Panel</a>
+            <a href="/lost-found" class="nav-link-item" data-translate="nav_lost_found">Lost & Found</a>
+            <a href="/notifications" class="nav-link-item" data-translate="nav_notifications">Notifications</a>
+        </div>
+
         <!-- Live Admin Grid -->
         <div class="admin-grid">
-            <!-- LEFT PANEL: Stats & Broadcast -->
+            <!-- LEFT PANEL: Stats, Broadcast & SOS -->
             <div>
                 <!-- KPI stats -->
                 <div class="kpi-grid">
                     <div class="glass-card kpi-card">
-                        <div class="kpi-title">Total Occupancy</div>
+                        <div class="kpi-title" data-translate="lbl_occupancy">Total Occupancy</div>
                         <div class="kpi-value" id="kpi-occupancy">0</div>
                         <div class="kpi-subtext" id="kpi-capacity-total">Capacity: 70,000</div>
                     </div>
@@ -42,6 +90,17 @@
                         <div class="kpi-value" id="admin-medical-avail">0</div>
                         <div class="kpi-subtext">Units Available</div>
                     </div>
+                </div>
+
+                <!-- Emergency SOS Console -->
+                <div class="glass-card dashboard-section" style="margin-bottom: 2rem;">
+                    <h2 class="section-title" style="color: var(--danger);">🚨 Active Emergency SOS Calls</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 0.5rem;">
+                        Real-time distress notifications triggered by stadium attendees:
+                    </p>
+                    <ul class="info-list" id="admin-sos-list">
+                        <li class="info-item" style="color:var(--text-muted);">No active emergency dispatches.</li>
+                    </ul>
                 </div>
 
                 <!-- Manual Broadcast Form -->
@@ -86,7 +145,6 @@
                 </p>
                 
                 <ul class="info-list" id="admin-zone-list">
-                    <!-- Populated dynamically -->
                     <li class="info-item">Loading zones and state...</li>
                 </ul>
             </div>
@@ -95,10 +153,16 @@
 
     <!-- Frontend Scripting -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/features.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lang.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
     <script>
-        // Start streaming state immediately for admin
         document.addEventListener('DOMContentLoaded', () => {
             initAdminStream();
+            loadAdminSOSList();
+            
+            // Poll for SOS updates every 5 seconds
+            setInterval(loadAdminSOSList, 5000);
         });
     </script>
 </body>

@@ -484,9 +484,317 @@ def assistant_chat():
         "timestamp": time.time()
     })
 
+# --- ARENAFLOW NEW EXTENSIONS MODULES ---
+
+from services.prediction_service import PredictionService
+from services.analytics_service import AnalyticsService
+from services.feedback_service import FeedbackService
+from services.sos_service import SOSService
+from services.report_service import ReportService
+
+prediction_svc = PredictionService(db)
+analytics_svc = AnalyticsService(db)
+feedback_svc = FeedbackService(db)
+sos_svc = SOSService(db)
+report_svc = ReportService(db)
+
+# 1. AI Incident Report Generator Page & API
+@app.route("/incident-report")
+@require_admin
+def incident_report_page():
+    return render_template("incident_report.html", username=session.get("username"))
+
+@app.route("/api/reports/incident")
+@require_admin
+def get_incident_report():
+    report_text = report_svc.generate_incident_report_text()
+    return jsonify({"status": "success", "report": report_text})
+
+@app.route("/api/reports/incident/pdf")
+@require_admin
+def get_incident_report_pdf():
+    report_text = report_svc.generate_incident_report_text()
+    pdf_bytes = report_svc.export_report_to_pdf(report_text, "Operations_Incident_Report")
+    if not pdf_bytes:
+        return "FPDF is not installed or PDF generation failed.", 500
+    
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "attachment;filename=operations_incident_report.pdf"}
+    )
+
+@app.route("/api/reports/match-summary/pdf")
+@require_admin
+def get_match_summary_pdf():
+    state = db.get_simulation_state()
+    summary_text = (
+        f"### ARENAFLOW MATCH SUMMARY REPORT\n\n"
+        f"**Match Day Metrics**:\n"
+        f"- Final Recorded Attendance: {state.get('occupancy', 0)} / {state.get('capacity', 70000)}\n"
+        f"- Active Alerts Count: {len(db.get_alerts())}\n"
+        f"- Staff Dispatches Logged: {len(db.get_dispatches())}\n\n"
+        f"**Security Dispatches**: {len([d for d in db.get_dispatches() if d.get('staff_type') == 'security'])}\n"
+        f"**Medical Dispatches**: {len([d for d in db.get_dispatches() if d.get('staff_type') == 'medical'])}\n\n"
+        f"**AI Copilot Operational Recommendations**:\n"
+        f"- Shift ticketing flows to West Gate during entry rushes.\n"
+        f"- Keep two standby medical units on South Concourse to manage food congestion."
+    )
+    pdf_bytes = report_svc.export_report_to_pdf(summary_text, "Operations_Match_Summary")
+    if not pdf_bytes:
+        return "PDF generation failed.", 500
+    return Response(
+        pdf_bytes,
+        mimetype="application/pdf",
+        headers={"Content-Disposition": "attachment;filename=match_summary.pdf"}
+    )
+
+# 2. AI Operations Copilot API
+@app.route("/api/copilot/chat", methods=["POST"])
+@require_admin
+def copilot_chat():
+    data = request.json or {}
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"status": "error", "message": "Message is required"}), 400
+    reply = report_svc.run_operations_copilot(message)
+    return jsonify({"status": "success", "message": reply})
+
+# 3. Analytics Dashboard Page & API
+@app.route("/analytics")
+@require_admin
+def analytics_page():
+    return render_template("analytics.html", username=session.get("username"))
+
+@app.route("/api/analytics/data")
+@require_admin
+def get_analytics_data():
+    data = analytics_svc.get_analytics()
+    return jsonify({"status": "success", "metrics": data})
+
+# 4. Crowd Prediction Engine API
+@app.route("/api/predictions")
+@require_auth
+def get_predictions():
+    predictions = prediction_svc.get_predictions()
+    return jsonify({"status": "success", "predictions": predictions})
+
+# 5. Fan Feedback System Page & API
+@app.route("/feedback")
+@require_auth
+def feedback_page():
+    return render_template("feedback.html", username=session.get("username"))
+
+@app.route("/api/feedback/submit", methods=["POST"])
+@require_auth
+def submit_feedback():
+    data = request.json or {}
+    scores = data.get("scores", {})
+    comments = data.get("comments", "")
+    feedback = feedback_svc.submit_feedback(scores, comments)
+    return jsonify({"status": "success", "feedback": feedback})
+
+@app.route("/api/feedback/summary")
+@require_auth
+def get_feedback_summary():
+    summary = feedback_svc.generate_feedback_summary()
+    return jsonify({"status": "success", "summary": summary})
+
+# 6. Emergency SOS Module API
+@app.route("/api/sos/send", methods=["POST"])
+@require_auth
+def send_sos():
+    data = request.json or {}
+    seat = data.get("seat", "").strip()
+    zone_id = data.get("zone_id", "").strip()
+    if not seat or not zone_id:
+        return jsonify({"status": "error", "message": "Seat and Zone ID are required"}), 400
+    sos = sos_svc.send_sos(seat, zone_id)
+    
+    # Broadcast to SSE listeners immediately
+    with sse_lock:
+        fresh_alerts = db.get_alerts()
+        payload = {"telemetry": current_state, "alerts": fresh_alerts}
+        for listener in list(sse_listeners):
+            try:
+                listener.put_nowait(payload)
+            except queue.Full:
+                pass
+                
+    return jsonify({"status": "success", "sos": sos})
+
+@app.route("/api/sos/list")
+@require_admin
+def get_sos_list():
+    alerts = sos_svc.get_sos_alerts()
+    return jsonify({"status": "success", "alerts": alerts})
+
+@app.route("/api/sos/update", methods=["POST"])
+@require_admin
+def update_sos():
+    data = request.json or {}
+    sos_id = data.get("id")
+    status = data.get("status")
+    success = sos_svc.update_sos_status(sos_id, status)
+    if success:
+        return jsonify({"status": "success", "message": "SOS status updated."})
+    return jsonify({"status": "error", "message": "Failed to update SOS status."}), 400
+
+# 7. Lost & Found Module Page & API
+@app.route("/lost-found")
+@require_auth
+def lost_found_page():
+    return render_template("lost_found.html", username=session.get("username"))
+
+@app.route("/api/lost-found/submit", methods=["POST"])
+@require_auth
+def submit_lost_found():
+    data = request.json or {}
+    item_type = data.get("item_type")
+    description = data.get("description")
+    location = data.get("location")
+    contact = data.get("contact")
+    
+    item = {
+        "id": f"lf-{time.time()}",
+        "item_type": item_type,
+        "description": description,
+        "location": location,
+        "contact": contact,
+        "status": "Found",
+        "timestamp": time.time()
+    }
+    
+    if db.use_firebase:
+        try:
+            db.db.collection("lost_found").document(item["id"]).set(item)
+        except Exception as e:
+            print(f"[LostFound] Firebase error: {e}")
+    else:
+        with db.lock:
+            local_data = db._read_local_db()
+            if "lost_found" not in local_data:
+                local_data["lost_found"] = []
+            local_data["lost_found"].append(item)
+            db._write_local_db(local_data)
+            
+    return jsonify({"status": "success", "item": item})
+
+@app.route("/api/lost-found/search")
+@require_auth
+def search_lost_found():
+    query = request.args.get("q", "").strip().lower()
+    
+    items = []
+    if db.use_firebase:
+        try:
+            docs = db.db.collection("lost_found").stream()
+            items = [doc.to_dict() for doc in docs]
+        except Exception as e:
+            print(f"[LostFound] Firebase read error: {e}")
+    else:
+        with db.lock:
+            local_data = db._read_local_db()
+            items = local_data.get("lost_found", [])
+            
+    if query:
+        items = [i for i in items if query in i["item_type"].lower() or query in i["description"].lower() or query in i["location"].lower()]
+        
+    items = sorted(items, key=lambda x: x["timestamp"], reverse=True)
+    return jsonify({"status": "success", "items": items})
+
+@app.route("/api/lost-found/update", methods=["POST"])
+@require_admin
+def update_lost_found():
+    data = request.json or {}
+    item_id = data.get("id")
+    status = data.get("status", "Claimed")
+    
+    if db.use_firebase:
+        try:
+            ref = db.db.collection("lost_found").document(item_id)
+            if ref.get().exists:
+                ref.update({"status": status})
+                return jsonify({"status": "success"})
+        except Exception as e:
+            print(f"[LostFound] Firebase update error: {e}")
+    else:
+        with db.lock:
+            local_data = db._read_local_db()
+            found = False
+            for item in local_data.get("lost_found", []):
+                if item["id"] == item_id:
+                    item["status"] = status
+                    found = True
+                    break
+            if found:
+                db._write_local_db(local_data)
+                return jsonify({"status": "success"})
+    return jsonify({"status": "error", "message": "Failed to update item"}), 400
+
+# 8. Parking Management Page & API
+@app.route("/parking")
+@require_auth
+def parking_page():
+    return render_template("parking.html", username=session.get("username"))
+
+@app.route("/api/parking")
+@require_auth
+def get_parking():
+    seed = int(time.time()) % 10
+    parking_data = [
+        {"id": "park-a", "name": "Parking A (North Gate)", "total_slots": 500, "occupied": 420 + seed, "walking_time_mins": 3},
+        {"id": "park-b", "name": "Parking B (South Gate)", "total_slots": 800, "occupied": 680 - seed, "walking_time_mins": 5},
+        {"id": "park-c", "name": "Parking C (VIP / East)", "total_slots": 300, "occupied": 290 + (seed % 3), "walking_time_mins": 8}
+    ]
+    return jsonify({"status": "success", "parking": parking_data})
+
+# 9. Notification History API
+@app.route("/notifications")
+@require_auth
+def notifications_page():
+    return render_template("notifications.html", username=session.get("username"))
+
+@app.route("/api/notifications/history")
+@require_auth
+def get_notifications_history():
+    history = []
+    
+    dispatches = db.get_dispatches()
+    for d in dispatches:
+        history.append({
+            "message": f"Dispatched {d['staff_type'].capitalize()} unit to Zone {d['zone_id']}",
+            "type": d['staff_type'],
+            "timestamp": d['timestamp']
+        })
+        
+    alerts = db.get_alerts()
+    for a in alerts:
+        history.append({
+            "message": a['message'],
+            "type": a['type'],
+            "timestamp": a['timestamp']
+        })
+        
+    history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
+    return jsonify({"status": "success", "history": history})
+
+# 10. Weather Widget API
+@app.route("/api/weather")
+@require_auth
+def get_weather():
+    weather_data = {
+        "temperature": 26,
+        "rain_chance": 10,
+        "wind_speed_kph": 12,
+        "advisory": "Weather is clear & warm. Grab a bottle of water and enjoy the match!"
+    }
+    seed = (int(time.time()) % 4) - 2
+    weather_data["temperature"] += seed
+    return jsonify({"status": "success", "weather": weather_data})
+
 # --- SERVER STARTUP ---
 
 if __name__ == "__main__":
-    # Run server on port 8080.
     port = int(os.environ.get("PORT", 8080))
     app.run(debug=False, host="0.0.0.0", port=port)
