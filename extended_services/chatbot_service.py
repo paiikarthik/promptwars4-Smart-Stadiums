@@ -1,6 +1,9 @@
 import os
 import json
 import time
+import logging
+
+logger = logging.getLogger("ChatbotService")
 
 # Try to import Google GenAI SDK
 try:
@@ -109,14 +112,16 @@ class ChatbotService:
         """
 
         if self.gemini_client:
-            try:
-                response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=system_prompt + f"\nUser Query: {message}"
-                )
-                return response.text
-            except Exception as e:
-                print(f"[ChatbotService] Gemini error: {e}")
+            # Fallback across supported models (Gemini 2.5, 2.0, and 1.5)
+            for m in ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']:
+                try:
+                    response = self.gemini_client.models.generate_content(
+                        model=m,
+                        contents=system_prompt + f"\nUser Query: {message}"
+                    )
+                    return response.text
+                except Exception as e:
+                    logger.warning(f"Failed to query Gemini model {m}: {e}")
 
         # Local rule-based fallback
         q = message.lower()

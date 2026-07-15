@@ -20,7 +20,7 @@
         }
     },
     "simulation_state": {
-        "occupancy": 70000,
+        "occupancy": 69814,
         "capacity": 70000,
         "gates": [
             {
@@ -36,24 +36,24 @@
             {
                 "id": "gate-e",
                 "name": "East Gate",
-                "waitTimeMinutes": 1
+                "waitTimeMinutes": 3
             },
             {
                 "id": "gate-w",
                 "name": "West Gate",
-                "waitTimeMinutes": 18
+                "waitTimeMinutes": 12
             }
         ],
         "zones": [
             {
                 "id": "zone-nc",
                 "name": "North Concourse",
-                "crowdLevel": 57
+                "crowdLevel": 61
             },
             {
                 "id": "zone-sc",
                 "name": "South Concourse",
-                "crowdLevel": 76
+                "crowdLevel": 75
             },
             {
                 "id": "zone-food",
@@ -63,17 +63,17 @@
             {
                 "id": "zone-merch",
                 "name": "Merch Stand",
-                "crowdLevel": 69
+                "crowdLevel": 64
             },
             {
                 "id": "zone-vip",
                 "name": "VIP Lounge",
-                "crowdLevel": 25
+                "crowdLevel": 19
             },
             {
                 "id": "zone-main",
                 "name": "Main Entrance",
-                "crowdLevel": 28
+                "crowdLevel": 34
             }
         ],
         "amenities": [
@@ -81,25 +81,25 @@
                 "id": "am-rest-main",
                 "name": "Main Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 14
+                "waitTimeMinutes": 13
             },
             {
                 "id": "am-rest-north",
                 "name": "North Washroom",
                 "type": "restroom",
-                "waitTimeMinutes": 30
+                "waitTimeMinutes": 25
             },
             {
                 "id": "am-food-pizza",
                 "name": "Pizza Stand",
                 "type": "food",
-                "waitTimeMinutes": 14
+                "waitTimeMinutes": 13
             },
             {
                 "id": "am-food-drinks",
                 "name": "Drinks Tent",
                 "type": "food",
-                "waitTimeMinutes": 20
+                "waitTimeMinutes": 19
             }
         ],
         "staff": {
