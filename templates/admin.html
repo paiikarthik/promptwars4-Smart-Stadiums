@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StadiumIQ | Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🛡️</span> StadiumIQ | Command Center
+        </div>
+        <div class="nav-user">
+            <div class="user-badge" id="lbl-username">
+                {{ username }} (Admin)
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Live Admin Grid -->
+        <div class="admin-grid">
+            <!-- LEFT PANEL: Stats & Broadcast -->
+            <div>
+                <!-- KPI stats -->
+                <div class="kpi-grid">
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Total Occupancy</div>
+                        <div class="kpi-value" id="kpi-occupancy">0</div>
+                        <div class="kpi-subtext" id="kpi-capacity-total">Capacity: 70,000</div>
+                    </div>
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Security Staff</div>
+                        <div class="kpi-value" id="admin-security-avail">0</div>
+                        <div class="kpi-subtext">Units Available</div>
+                    </div>
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Medical Staff</div>
+                        <div class="kpi-value" id="admin-medical-avail">0</div>
+                        <div class="kpi-subtext">Units Available</div>
+                    </div>
+                </div>
+
+                <!-- Manual Broadcast Form -->
+                <div class="glass-card dashboard-section">
+                    <h2 class="section-title">📢 Manual Broadcast Alert</h2>
+                    <form onsubmit="handleBroadcastSubmit(event)" class="alert-editor" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" for="alert-msg">Broadcast Message</label>
+                            <input type="text" id="alert-msg" class="form-input" placeholder="Type a message (e.g. West Gate wait time is now under 5 minutes)" required maxlength="200" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Alert Level / Type</label>
+                            <div class="alert-type-select">
+                                <div class="alert-type-option">
+                                    <input type="radio" id="type-info" name="alert-type" value="info" checked>
+                                    <label for="type-info" class="alert-type-label info">Info</label>
+                                </div>
+                                <div class="alert-type-option">
+                                    <input type="radio" id="type-success" name="alert-type" value="success">
+                                    <label for="type-success" class="alert-type-label success">Success</label>
+                                </div>
+                                <div class="alert-type-option">
+                                    <input type="radio" id="type-warning" name="alert-type" value="warning">
+                                    <label for="type-warning" class="alert-type-label warning">Warning</label>
+                                </div>
+                                <div class="alert-type-option">
+                                    <input type="radio" id="type-danger" name="alert-type" value="danger">
+                                    <label for="type-danger" class="alert-type-label danger">Danger</label>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit" style="margin-top: 0;">Broadcast to Fan Hub</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Zone Management & Dispatch -->
+            <div class="glass-card dashboard-section">
+                <h2 class="section-title">🛡️ Zone Management & Staff Dispatch</h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                    Deploy units directly to concourse zones showing elevated crowd densities:
+                </p>
+                
+                <ul class="info-list" id="admin-zone-list">
+                    <!-- Populated dynamically -->
+                    <li class="info-item">Loading zones and state...</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Frontend Scripting -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Start streaming state immediately for admin
+        document.addEventListener('DOMContentLoaded', () => {
+            initAdminStream();
+        });
+    </script>
+</body>
+</html>

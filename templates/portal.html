@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StadiumIQ | Mission Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="portal-wrapper">
+        <div class="glass-card portal-box">
+            <div class="portal-logo">🏟️</div>
+            <h1 class="portal-title">StadiumIQ</h1>
+            
+            <div class="form-toggle">
+                <button class="toggle-btn active" id="btn-show-login" onclick="showForm('login')">Sign In</button>
+                <button class="toggle-btn" id="btn-show-register" onclick="showForm('register')">Register</button>
+            </div>
+
+            <!-- Error and Success alert banners -->
+            <div id="form-error" class="form-error"></div>
+            <div id="form-success" class="form-success"></div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" onsubmit="handleAuth(event, 'login')">
+                <div class="form-group">
+                    <label class="form-label" for="login-username">Username</label>
+                    <input type="text" id="login-username" class="form-input" placeholder="Enter username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-submit">Sign In to Dashboard</button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="register-form" onsubmit="handleAuth(event, 'register')" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label" for="reg-username">Username</label>
+                    <input type="text" id="reg-username" class="form-input" placeholder="Choose a username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reg-password">Password</label>
+                    <input type="password" id="reg-password" class="form-input" placeholder="Choose a secure password" required autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">System Access Role</label>
+                    <div class="role-select">
+                        <div class="role-option">
+                            <input type="radio" id="role-fan" name="role" value="attendee" checked>
+                            <label for="role-fan" class="role-label">Attendee</label>
+                        </div>
+                        <div class="role-option">
+                            <input type="radio" id="role-admin" name="role" value="admin">
+                            <label for="role-admin" class="role-label">Admin</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Frontend Scripting -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

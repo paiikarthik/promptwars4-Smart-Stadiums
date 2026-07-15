@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StadiumIQ | Fan Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="glass-card navbar">
+        <div class="brand">
+            <span>🏟️</span> StadiumIQ | Fan Hub
+        </div>
+        <div class="nav-user">
+            <div class="user-badge" id="lbl-username">
+                {{ username }}
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Live Notifications Banner -->
+        <div id="live-alert" class="notification-banner" style="display: none;">
+            <div class="notification-content">
+                <span class="notification-icon" id="alert-icon">📢</span>
+                <div class="notification-text">
+                    <h4 id="alert-title">Important System Alert</h4>
+                    <p id="alert-message">Wait times at Gate East are peaking at 22 mins.</p>
+                </div>
+            </div>
+            <!-- Dismiss button or automatic -->
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- LEFT PANEL: Telemetry and Pathfinder -->
+            <div class="left-panel">
+                <!-- KPI cards -->
+                <div class="kpi-grid">
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Stadium Occupancy</div>
+                        <div class="kpi-value" id="kpi-occupancy">0</div>
+                        <div class="kpi-subtext" id="kpi-capacity-total">Capacity: 70,000</div>
+                    </div>
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Fastest Gate</div>
+                        <div class="kpi-value" id="kpi-fastest-gate">-</div>
+                        <div class="kpi-subtext" id="kpi-fastest-gate-time">Wait time: - mins</div>
+                    </div>
+                    <div class="glass-card kpi-card">
+                        <div class="kpi-title">Congested Concourse</div>
+                        <div class="kpi-value" id="kpi-congested-zone">-</div>
+                        <div class="kpi-subtext" id="kpi-congested-level">Density: -%</div>
+                    </div>
+                </div>
+
+                <!-- Smart Pathfinder Quick Actions -->
+                <div class="glass-card dashboard-section">
+                    <h2 class="section-title">📍 Smart Pathfinder</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                        Click a shortcut to query the routing engine and find the shortest lines instantly:
+                    </p>
+                    <div class="pathfinder-actions">
+                        <div class="action-card" onclick="quickQuery('Which gate is fastest to enter?')">
+                            <div class="action-icon">🚀</div>
+                            <div class="action-label">Fastest Entry</div>
+                            <div class="action-value" id="action-gate">Querying...</div>
+                        </div>
+                        <div class="action-card" onclick="quickQuery('What washroom should I use right now?')">
+                            <div class="action-icon">🚻</div>
+                            <div class="action-label">Nearest Washroom</div>
+                            <div class="action-value" id="action-restroom">Querying...</div>
+                        </div>
+                        <div class="action-card" onclick="quickQuery('Where can I grab food with the shortest queue?')">
+                            <div class="action-icon">🍕</div>
+                            <div class="action-label">Food & Drink</div>
+                            <div class="action-value" id="action-food">Querying...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid splitting Gates, Concourses, Washrooms and Food -->
+                <div class="details-split">
+                    <!-- Gates Live Wait Times -->
+                    <div class="glass-card dashboard-section">
+                        <h2 class="section-title">Live Gate Wait Times</h2>
+                        <ul class="info-list" id="list-gates">
+                            <!-- Populated dynamically -->
+                            <li class="info-item">Loading...</li>
+                        </ul>
+                    </div>
+
+                    <!-- Live Concourses Density -->
+                    <div class="glass-card dashboard-section">
+                        <h2 class="section-title">Live Zone Density</h2>
+                        <ul class="info-list" id="list-zones">
+                            <!-- Populated dynamically -->
+                            <li class="info-item">Loading...</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Amenities split -->
+                <div class="glass-card dashboard-section" style="margin-top: 1.5rem;">
+                    <h2 class="section-title">Amenities & Queues</h2>
+                    <div class="details-split">
+                        <div>
+                            <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">🚻 Restrooms</h3>
+                            <ul class="info-list" id="list-restrooms">
+                                <li class="info-item">Loading...</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-secondary); margin: 0.5rem 0 1rem 0;">🍔 Food Stands</h3>
+                            <ul class="info-list" id="list-food">
+                                <li class="info-item">Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Chatbot Concierge -->
+            <div class="glass-card chat-container">
+                <div class="chat-header">
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-status">
+                        <h3>Stadium Concierge</h3>
+                        <p>Powered by Gemini AI (Grounded)</p>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-msg bot">
+                        <p>Welcome! I am your AI Stadium Concierge. Ask me anything about entry gates, restrooms, food stands, or crowd conditions in the stadium. I'll search live telemetry to guide you!</p>
+                    </div>
+                </div>
+
+                <form class="chat-input-area" onsubmit="handleChatSubmit(event)">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Ask about wait times, gates, restrooms..." required autocomplete="off">
+                    <button type="submit" class="btn-send">➔</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Frontend Scripting -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Start streaming state immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboardStream();
+        });
+    </script>
+</body>
+</html>
