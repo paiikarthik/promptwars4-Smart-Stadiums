@@ -90,7 +90,7 @@
         </div>
         <div class="nav-user">
             <!-- Language Selector -->
-            <select id="lang-selector" onchange="changeLanguage(this.value)" class="nav-link-item" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="nav-link-item" style="padding: 0.35rem 0.5rem; width: auto; flex: none;" aria-label="Language Selector">
                 <option value="en">English</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
@@ -259,7 +259,7 @@
                 </div>
 
                 <form class="chat-input-area" onsubmit="handleChatSubmit(event)">
-                    <input type="text" id="chat-input" class="chat-input" placeholder="Ask about wait times, gates, restrooms..." required autocomplete="off">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Ask about wait times, gates, restrooms..." required autocomplete="off" aria-label="Concierge Chat Message Input">
                     <button type="submit" class="btn-send" data-translate="btn_chat_send">➔</button>
                 </form>
             </div>

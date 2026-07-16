@@ -4,7 +4,7 @@ import unittest
 from app import app, db
 from firebase_helper import StadiumDB
 
-class StadiumIQTest(unittest.TestCase):
+class ArenaFlowTest(unittest.TestCase):
     def setUp(self):
         # Configure app for testing
         app.config['TESTING'] = True
@@ -135,6 +135,17 @@ class StadiumIQTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
         self.assertEqual(data["status"], "success")
+
+        # 5. Logout through API
+        response = self.client.post("/api/auth/logout")
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertEqual(data["status"], "success")
+        self.assertIn("redirect", data)
+
+        # 6. Verify telemetry is no longer accessible
+        response = self.client.get("/api/telemetry")
+        self.assertEqual(response.status_code, 401)
 
     def test_admin_only_privileges(self):
         """Test that attendee cannot access admin endpoints."""

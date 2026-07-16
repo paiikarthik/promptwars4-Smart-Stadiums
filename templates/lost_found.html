@@ -14,7 +14,7 @@
         </div>
         <div class="nav-user">
             <!-- Language Selector -->
-            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;" aria-label="Language Selector">
                 <option value="en">English</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
@@ -85,7 +85,7 @@
                 <h2 class="section-title">🔍 Search Registry</h2>
                 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <input type="text" id="lf-search" class="form-input" placeholder="Search by type or location (e.g. Wallet or Food Court)" oninput="handleRegistrySearch()" autocomplete="off">
+                    <input type="text" id="lf-search" class="form-input" placeholder="Search by type or location (e.g. Wallet or Food Court)" oninput="handleRegistrySearch()" autocomplete="off" aria-label="Search lost items registry">
                 </div>
 
                 <ul class="info-list" id="lost-found-results" style="max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">

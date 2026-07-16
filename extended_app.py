@@ -42,6 +42,15 @@ def inject_extended_features(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://maps.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com https://maps.gstatic.com https://maps.googleapis.com; "
+        "connect-src 'self' https://maps.googleapis.com; "
+        "frame-src 'none';"
+    )
 
     from flask import request
 

@@ -2,6 +2,9 @@ import os
 import json
 import time
 import threading
+import logging
+
+logger = logging.getLogger("StadiumDB")
 
 # Firebase SDK imports
 try:
@@ -28,13 +31,13 @@ class StadiumDB:
                     firebase_admin.initialize_app(cred)
                     self.db = firestore.client()
                     self.use_firebase = True
-                    print("[StadiumDB] Initialized successfully using Firebase Firestore.")
+                    logger.info("[StadiumDB] Initialized successfully using Firebase Firestore.")
                 except Exception as e:
-                    print(f"[StadiumDB] Firebase initialization failed: {e}. Falling back to Local DB.")
+                    logger.error(f"[StadiumDB] Firebase initialization failed: {e}. Falling back to Local DB.")
             else:
-                print("[StadiumDB] No serviceAccountKey.json found. Falling back to Local DB.")
+                logger.info("[StadiumDB] No serviceAccountKey.json found. Falling back to Local DB.")
         else:
-            print("[StadiumDB] firebase-admin package not found. Falling back to Local DB.")
+            logger.info("[StadiumDB] firebase-admin package not found. Falling back to Local DB.")
 
         if not self.use_firebase:
             self._init_local_db()
@@ -77,9 +80,9 @@ class StadiumDB:
                     "dispatches": []
                 }
                 self._write_local_db(default_data)
-                print("[StadiumDB] Initialized fresh Local JSON database.")
+                logger.info("[StadiumDB] Initialized fresh Local JSON database.")
             else:
-                print("[StadiumDB] Found existing Local JSON database.")
+                logger.info("[StadiumDB] Found existing Local JSON database.")
 
     def _read_local_db(self):
         """Reads local JSON DB file. Assumes lock is held."""
@@ -87,7 +90,7 @@ class StadiumDB:
             with open(self.local_db_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"[StadiumDB] Error reading local DB: {e}")
+            logger.error(f"[StadiumDB] Error reading local DB: {e}")
             return {"users": {}, "simulation_state": {}, "alerts": [], "dispatches": []}
 
     def _write_local_db(self, data):
@@ -96,7 +99,7 @@ class StadiumDB:
             with open(self.local_db_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         except Exception as e:
-            print(f"[StadiumDB] Error writing local DB: {e}")
+            logger.error(f"[StadiumDB] Error writing local DB: {e}")
 
     # --- USER AUTHENTICATION METHODS ---
     
@@ -115,7 +118,7 @@ class StadiumDB:
                 })
                 return True
             except Exception as e:
-                print(f"[StadiumDB] Firebase register error: {e}")
+                logger.error(f"[StadiumDB] Firebase register error: {e}")
                 return False
         else:
             with self.lock:
@@ -140,7 +143,7 @@ class StadiumDB:
                     return user_ref.to_dict()
                 return None
             except Exception as e:
-                print(f"[StadiumDB] Firebase get_user error: {e}")
+                logger.error(f"[StadiumDB] Firebase get_user error: {e}")
                 return None
         else:
             with self.lock:
@@ -155,7 +158,7 @@ class StadiumDB:
             try:
                 self.db.collection("simulation_state").document("current").set(state)
             except Exception as e:
-                print(f"[StadiumDB] Firebase save_state error: {e}")
+                logger.error(f"[StadiumDB] Firebase save_state error: {e}")
         else:
             with self.lock:
                 data = self._read_local_db()
@@ -170,7 +173,7 @@ class StadiumDB:
                 if doc.exists:
                     return doc.to_dict()
             except Exception as e:
-                print(f"[StadiumDB] Firebase get_state error: {e}")
+                logger.error(f"[StadiumDB] Firebase get_state error: {e}")
         
         # Local fallback if Firebase fails or is disabled
         with self.lock:
@@ -193,7 +196,7 @@ class StadiumDB:
                 self.db.collection("alerts").document(alert["id"]).set(alert)
                 return alert
             except Exception as e:
-                print(f"[StadiumDB] Firebase add_alert error: {e}")
+                logger.error(f"[StadiumDB] Firebase add_alert error: {e}")
         
         # Local JSON write
         with self.lock:
@@ -209,7 +212,7 @@ class StadiumDB:
                 docs = self.db.collection("alerts").order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
                 return [doc.to_dict() for doc in docs]
             except Exception as e:
-                print(f"[StadiumDB] Firebase get_alerts error: {e}")
+                logger.error(f"[StadiumDB] Firebase get_alerts error: {e}")
         
         with self.lock:
             data = self._read_local_db()
@@ -225,7 +228,7 @@ class StadiumDB:
                 for doc in docs:
                     doc.reference.delete()
             except Exception as e:
-                print(f"[StadiumDB] Firebase clear_auto_alerts error: {e}")
+                logger.error(f"[StadiumDB] Firebase clear_auto_alerts error: {e}")
         else:
             with self.lock:
                 data = self._read_local_db()
@@ -247,7 +250,7 @@ class StadiumDB:
                 self.db.collection("dispatches").document(dispatch["id"]).set(dispatch)
                 return dispatch
             except Exception as e:
-                print(f"[StadiumDB] Firebase log_dispatch error: {e}")
+                logger.error(f"[StadiumDB] Firebase log_dispatch error: {e}")
         
         with self.lock:
             data = self._read_local_db()
@@ -262,7 +265,7 @@ class StadiumDB:
                 docs = self.db.collection("dispatches").order_by("timestamp", direction=firestore.Query.DESCENDING).stream()
                 return [doc.to_dict() for doc in docs]
             except Exception as e:
-                print(f"[StadiumDB] Firebase get_dispatches error: {e}")
+                logger.error(f"[StadiumDB] Firebase get_dispatches error: {e}")
         
         with self.lock:
             data = self._read_local_db()

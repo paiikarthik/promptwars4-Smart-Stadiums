@@ -148,5 +148,42 @@ class ExtendedAppTestCase(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data["translated"], "आज का मैच")
 
+    def test_csrf_protection_blocking(self):
+        """Tests that CSRF checks block POST requests with mismatching Origin/Referer when not in test mode."""
+        app.config["TESTING"] = False
+        try:
+            response = self.client.post("/api/auth/register",
+                                         data=json.dumps({"username": "csrf_test", "password": "password123"}),
+                                         content_type="application/json",
+                                         headers={
+                                             "Origin": "http://malicious-attacker.com",
+                                             "Referer": "http://malicious-attacker.com/exploit"
+                                         })
+            self.assertEqual(response.status_code, 403)
+            self.assertIn("blocked", json.loads(response.data)["message"].lower())
+        finally:
+            app.config["TESTING"] = True
+
+    def test_server_side_input_sanitization(self):
+        """Tests that HTML script tags are safely stripped from user inputs."""
+        # 1. Test registering with script tag in username (alphanumeric check will block it)
+        reg_payload = {
+            "username": "<script>alert('XSS')</script>xssuser",
+            "password": "password123",
+            "role": "attendee"
+        }
+        response = self.client.post("/api/auth/register",
+                                    data=json.dumps(reg_payload),
+                                    content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        
+        # 2. Test sanitize_html logic directly
+        from app import sanitize_html
+        dirty_input = "Row <script>alert('hack')</script> 12"
+        clean_output = sanitize_html(dirty_input)
+        self.assertNotIn("<script>", clean_output)
+        self.assertNotIn("</script>", clean_output)
+        self.assertEqual(clean_output, "Row  12")
+
 if __name__ == "__main__":
     unittest.main()

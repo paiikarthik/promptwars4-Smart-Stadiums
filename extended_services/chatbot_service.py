@@ -121,7 +121,12 @@ class ChatbotService:
                     )
                     return response.text
                 except Exception as e:
-                    logger.warning(f"Failed to query Gemini model {m}: {e}")
+                    # Security: Redact API Key from error logs to prevent credential leakage
+                    err_msg = str(e)
+                    key = os.environ.get("GEMINI_API_KEY")
+                    if key and key in err_msg:
+                        err_msg = err_msg.replace(key, "[REDACTED]")
+                    logger.warning(f"Failed to query Gemini model {m}: {err_msg}")
 
         # Local rule-based fallback
         q = message.lower()

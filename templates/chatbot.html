@@ -15,8 +15,7 @@
             <span data-translate="lbl_assistant_title">🤖 AI Stadium Super Assistant</span>
         </div>
         <div class="nav-user">
-            <!-- Indian Language Dropdown -->
-            <select id="indian-lang-selector" onchange="changeIndianLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+            <select id="indian-lang-selector" onchange="changeIndianLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;" aria-label="Indian Language Selector">
                 <option value="en">English</option>
                 <option value="hi">हिंदी (Hindi)</option>
                 <option value="kn">ಕನ್ನಡ (Kannada)</option>
@@ -66,7 +65,7 @@
 
             <!-- Typing Bar & Microphones -->
             <form onsubmit="handleSuperChatSubmit(event)" style="padding: 1rem; border-top: 1px solid var(--glass-border); display:flex; gap:0.75rem; background:rgba(0,0,0,0.1);">
-                <input type="text" id="super-chat-input" class="chat-input" placeholder="Type a message or use Listen Mode..." required autocomplete="off" style="flex:1; border-radius: 50px;">
+                <input type="text" id="super-chat-input" class="chat-input" placeholder="Type a message or use Listen Mode..." required autocomplete="off" style="flex:1; border-radius: 50px;" aria-label="Stadium Super Assistant Chat Input">
                 <button type="button" class="btn-send" id="btn-hold-speak" style="background:var(--accent); border-radius:50%; width: 45px; height: 45px; flex:none; display:flex; align-items:center; justify-content:center; padding:0;" onclick="toggleHoldToSpeak()">🎤</button>
                 <button type="submit" class="btn-send" style="border-radius:50%; width: 45px; height: 45px; flex:none; display:flex; align-items:center; justify-content:center; padding:0;">➔</button>
             </form>

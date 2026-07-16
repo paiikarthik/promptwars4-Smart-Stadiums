@@ -14,7 +14,7 @@
         </div>
         <div class="nav-user">
             <!-- Language Selector -->
-            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;">
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="toggle-btn" style="padding: 0.35rem 0.5rem; width: auto; flex: none;" aria-label="Language Selector">
                 <option value="en">English</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
@@ -28,7 +28,7 @@
             {% endif %}
         </div>
     </header>
-
+ 
     <main class="container">
         <!-- Accessibility Control Widget -->
         <div style="display:flex; gap: 0.5rem; margin-bottom: 1.5rem;">
@@ -36,15 +36,15 @@
             <button class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleLargeText()">Text Size Toggle</button>
             <button id="btn-voice-read" class="toggle-btn" style="width:auto; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="toggleVoiceReading()">Voice Reading: OFF</button>
         </div>
-
+ 
         <div class="glass-card dashboard-section">
             <h2 class="section-title">🕒 Chronological Operations Log & History</h2>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem; margin-top: 0.5rem;">
                 Searchable history of all alerts, dispatches, crowd changes, broadcasts, and AI decisions:
             </p>
-
+ 
             <div class="form-group" style="margin-bottom: 1.5rem;">
-                <input type="text" id="log-search" class="form-input" placeholder="Search notification content (e.g. Food Court or Gate)" oninput="filterLogs()" autocomplete="off">
+                <input type="text" id="log-search" class="form-input" placeholder="Search notification content (e.g. Food Court or Gate)" oninput="filterLogs()" autocomplete="off" aria-label="Search notification logs">
             </div>
 
             <ul class="info-list" id="log-container" style="max-height: 550px; overflow-y: auto; padding-right: 0.5rem;">
@@ -74,6 +74,19 @@
             }
         }
 
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
         function renderLogs(logs) {
             const container = document.getElementById("log-container");
             if (!container) return;
@@ -94,10 +107,10 @@
                     <li class="info-item" style="justify-content: space-between; align-items: center; gap: 1rem;">
                         <div>
                             <span style="font-size:0.75rem; color:var(--text-muted); display:inline-block; width: 80px;">${timeString}</span>
-                            <span style="font-weight: 500;">${l.message}</span>
+                            <span style="font-weight: 500;">${escapeHTML(l.message)}</span>
                         </div>
                         <span class="item-value ${badgeClass}" style="padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 50px;">
-                            ${l.type.toUpperCase()}
+                            ${escapeHTML(l.type.toUpperCase())}
                         </span>
                     </li>
                 `;

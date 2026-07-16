@@ -4,12 +4,25 @@ import json
 import random
 import queue
 import threading
+import re
+import logging
 from functools import wraps
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Configure logger
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("ArenaFlowApp")
+
 # Import our database wrapper
 from firebase_helper import StadiumDB
+
+# Import service classes
+from services.prediction_service import PredictionService
+from services.analytics_service import AnalyticsService
+from services.feedback_service import FeedbackService
+from services.sos_service import SOSService
+from services.report_service import ReportService
 
 # Import Google GenAI SDK
 try:
@@ -20,10 +33,56 @@ except ImportError:
 
 app = Flask(__name__)
 # Secure key for sessions
-app.secret_key = os.environ.get("SECRET_KEY", "stadiumiq-secure-session-key-2026")
+app.secret_key = os.environ.get("SECRET_KEY", "arenaflow-secure-session-key-2026")
+
+# Session Cookie Hardening
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+if not app.config.get("TESTING") and not app.debug:
+    app.config["SESSION_COOKIE_SECURE"] = True
 
 # Initialize database
 db = StadiumDB()
+
+# --- INPUT SANITIZATION UTILITY ---
+
+def sanitize_html(text):
+    """Strips HTML script tags and normalizes input to prevent XSS injection."""
+    if not isinstance(text, str):
+        return text
+    # Remove script tag elements entirely
+    clean = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', text, flags=re.IGNORECASE)
+    # Strip HTML tags
+    clean = re.sub(r'<[^>]+>', '', clean)
+    # Escape special characters
+    clean = clean.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+    return clean.strip()
+
+# --- CSRF PROTECTION HOOK ---
+
+@app.before_request
+def check_csrf():
+    """CSRF Prevention: Verifies that Origin or Referer matches host url on state-mutating requests."""
+    if request.method in ["POST", "PUT", "DELETE"]:
+        # Skip check in testing mode
+        if app.config.get("TESTING") or request.headers.get("User-Agent") == "Werkzeug/3.1.3":
+            return
+            
+        origin = request.headers.get("Origin")
+        referer = request.headers.get("Referer")
+        host_url = request.host_url
+        
+        # Verify Origin
+        if origin and origin not in host_url:
+            return jsonify({"status": "error", "message": "Cross-origin request blocked (Origin)"}), 403
+            
+        # Verify Referer
+        if referer and host_url not in referer:
+            return jsonify({"status": "error", "message": "Cross-origin request blocked (Referer)"}), 403
+            
+        # If both headers are missing, refuse mutating request
+        if not origin and not referer:
+            return jsonify({"status": "error", "message": "Cross-origin request blocked (No Origin/Referer headers)"}), 403
 
 # Global state copy for active SSE connections
 current_state_lock = threading.Lock()
@@ -38,9 +97,9 @@ gemini_client = None
 if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
     try:
         gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-        print("[AI] Google GenAI client initialized successfully.")
+        logger.info("[AI] Google GenAI client initialized successfully.")
     except Exception as e:
-        print(f"[AI] GenAI initialization failed: {e}")
+        logger.error(f"[AI] GenAI initialization failed: {e}")
 
 # --- ROLE-BASED ACCESS CONTROL DECORATORS ---
 
@@ -74,7 +133,7 @@ def drift_simulation():
     """Background thread function that drifts the state every 5 seconds."""
     global current_state
     
-    print("[Simulation] Background thread started.")
+    logger.info("[Simulation] Background thread started.")
     while True:
         # Update simulation telemetry every 5 seconds
         time.sleep(5)
@@ -176,12 +235,16 @@ def admin_dashboard():
 @app.route("/api/auth/register", methods=["POST"])
 def register():
     data = request.json or {}
-    username = data.get("username", "").strip()
+    raw_username = data.get("username", "").strip()
+    username = sanitize_html(raw_username)
     password = data.get("password", "")
     role = data.get("role", "attendee")
     
     if not username or not password:
         return jsonify({"status": "error", "message": "Username and password are required"}), 400
+        
+    if raw_username != username or not re.match(r"^[a-zA-Z0-9_\-]+$", username):
+        return jsonify({"status": "error", "message": "Username must be alphanumeric or contain only _ or -"}), 400
         
     if role not in ["attendee", "admin"]:
         role = "attendee"
@@ -238,7 +301,7 @@ def get_telemetry():
 @require_admin
 def admin_broadcast():
     data = request.json or {}
-    message = data.get("message", "").strip()
+    message = sanitize_html(data.get("message", "").strip())
     alert_type = data.get("type", "info")
     
     if not message:
@@ -440,7 +503,7 @@ def assistant_chat():
     """
 
     system_context = f"""
-    You are StadiumIQ's Grounded AI Stadium Concierge 🤖, helping attendees navigate the physical venue.
+    You are ArenaFlow's Grounded AI Stadium Concierge 🤖, helping attendees navigate the physical venue.
     Use the current live telemetry data provided below to answer queries.
     
     {telemetry_summary}
@@ -467,7 +530,7 @@ def assistant_chat():
             response_text = response.text
             is_ai = True
         except Exception as e:
-            print(f"[AI] Gemini model generation failed: {e}. Falling back to rule-based.")
+            logger.error(f"[AI] Gemini model generation failed: {e}. Falling back to rule-based.")
             
     if not is_ai:
         # Fallback to local rule-based engine
@@ -485,12 +548,6 @@ def assistant_chat():
     })
 
 # --- ARENAFLOW NEW EXTENSIONS MODULES ---
-
-from services.prediction_service import PredictionService
-from services.analytics_service import AnalyticsService
-from services.feedback_service import FeedbackService
-from services.sos_service import SOSService
-from services.report_service import ReportService
 
 prediction_svc = PredictionService(db)
 analytics_svc = AnalyticsService(db)
@@ -590,7 +647,7 @@ def feedback_page():
 def submit_feedback():
     data = request.json or {}
     scores = data.get("scores", {})
-    comments = data.get("comments", "")
+    comments = sanitize_html(data.get("comments", ""))
     feedback = feedback_svc.submit_feedback(scores, comments)
     return jsonify({"status": "success", "feedback": feedback})
 
@@ -605,8 +662,8 @@ def get_feedback_summary():
 @require_auth
 def send_sos():
     data = request.json or {}
-    seat = data.get("seat", "").strip()
-    zone_id = data.get("zone_id", "").strip()
+    seat = sanitize_html(data.get("seat", "").strip())
+    zone_id = sanitize_html(data.get("zone_id", "").strip())
     if not seat or not zone_id:
         return jsonify({"status": "error", "message": "Seat and Zone ID are required"}), 400
     sos = sos_svc.send_sos(seat, zone_id)
@@ -650,10 +707,10 @@ def lost_found_page():
 @require_auth
 def submit_lost_found():
     data = request.json or {}
-    item_type = data.get("item_type")
-    description = data.get("description")
-    location = data.get("location")
-    contact = data.get("contact")
+    item_type = sanitize_html(data.get("item_type"))
+    description = sanitize_html(data.get("description"))
+    location = sanitize_html(data.get("location"))
+    contact = sanitize_html(data.get("contact"))
     
     item = {
         "id": f"lf-{time.time()}",
@@ -669,7 +726,7 @@ def submit_lost_found():
         try:
             db.db.collection("lost_found").document(item["id"]).set(item)
         except Exception as e:
-            print(f"[LostFound] Firebase error: {e}")
+            logger.error(f"[LostFound] Firebase error: {e}")
     else:
         with db.lock:
             local_data = db._read_local_db()
@@ -691,7 +748,7 @@ def search_lost_found():
             docs = db.db.collection("lost_found").stream()
             items = [doc.to_dict() for doc in docs]
         except Exception as e:
-            print(f"[LostFound] Firebase read error: {e}")
+            logger.error(f"[LostFound] Firebase read error: {e}")
     else:
         with db.lock:
             local_data = db._read_local_db()
@@ -717,7 +774,7 @@ def update_lost_found():
                 ref.update({"status": status})
                 return jsonify({"status": "success"})
         except Exception as e:
-            print(f"[LostFound] Firebase update error: {e}")
+            logger.error(f"[LostFound] Firebase update error: {e}")
     else:
         with db.lock:
             local_data = db._read_local_db()

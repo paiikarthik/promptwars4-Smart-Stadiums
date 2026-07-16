@@ -99,14 +99,20 @@ async function handleAuth(event, mode) {
 async function handleLogout() {
     try {
         const response = await fetch("/api/auth/logout", {
-            method: "POST"
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
         });
-        const data = await response.json();
         if (response.ok) {
-            window.location.href = data.redirect;
+            const data = await response.json();
+            window.location.href = data.redirect || "/";
+        } else {
+            window.location.href = "/";
         }
     } catch (e) {
         console.error("Logout failed", e);
+        window.location.href = "/";
     }
 }
 
@@ -394,7 +400,19 @@ async function handleBroadcastSubmit(event) {
     }
 }
 
-// --- STADIUM AI CONCIERGE CHAT ACTIONS ---
+// HTML escape function to mitigate XSS
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
 
 function appendChatMessage(sender, text) {
     const chatBox = document.getElementById("chat-messages");
@@ -403,8 +421,11 @@ function appendChatMessage(sender, text) {
     const msgDiv = document.createElement("div");
     msgDiv.className = `chat-msg ${sender}`;
     
+    // First escape the message text to prevent script injection (XSS)
+    const escapedText = escapeHTML(text);
+    
     // Convert markdown paragraphs/bullet lists/bold text to clean HTML
-    let formattedText = text
+    let formattedText = escapedText
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/###\s(.*?)\n/g, '<h3>$1</h3>')
         .replace(/\n\n/g, '<p></p>')

@@ -1,3 +1,17 @@
+// HTML escape helper to prevent script injection (XSS)
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
 // --- FLOATING SOS BUTTON AND SYSTEM CONTROLLER ---
 
 function toggleSOSModal(show) {
@@ -75,7 +89,7 @@ async function loadAdminSOSList() {
             return `
                 <li class="info-item" style="flex-wrap: wrap; gap: 0.5rem;">
                     <div style="flex: 1; min-width: 150px;">
-                        <div>⚠️ Emergency: <strong>Seat ${s.seat}</strong> in <strong>Zone ${s.zone_id}</strong></div>
+                        <div>⚠️ Emergency: <strong>Seat ${escapeHTML(s.seat)}</strong> in <strong>Zone ${escapeHTML(s.zone_id)}</strong></div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">
                             Triggered: ${timeAgo(s.timestamp)} ago
                         </div>
@@ -183,8 +197,10 @@ async function loadFeedbackSummary() {
         const response = await fetch("/api/feedback/summary");
         const data = await response.json();
         if (response.ok) {
+            // First escape to prevent XSS
+            const escaped = escapeHTML(data.summary);
             // Replace markdown
-            let formatted = data.summary
+            let formatted = escaped
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*\s(.*?)\n/g, '<li>$1</li>')
                 .replace(/\n\n/g, '<p></p>');
@@ -269,17 +285,17 @@ async function loadLostFoundList(searchQuery = "") {
 
             return `
                 <li class="info-item" style="flex-wrap: wrap; gap: 0.5rem; justify-content: space-between;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <h4 style="font-weight: 700; font-size: 1rem;">📦 ${item.item_type}</h4>
+                     <div style="flex: 1; min-width: 200px;">
+                        <h4 style="font-weight: 700; font-size: 1rem;">📦 ${escapeHTML(item.item_type)}</h4>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.15rem;">
-                            ${item.description}
+                            ${escapeHTML(item.description)}
                         </p>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-                            📍 Lost near: ${item.location} | Contact: ${item.contact}
+                            📍 Lost near: ${escapeHTML(item.location)} | Contact: ${escapeHTML(item.contact)}
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap: 1rem;">
-                        <span style="${statusStyle}">${item.status}</span>
+                        <span style="${statusStyle}">${escapeHTML(item.status)}</span>
                         ${btnHtml}
                     </div>
                 </li>

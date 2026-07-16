@@ -35,7 +35,7 @@
         </div>
         <div class="nav-user">
             <!-- Language Selector -->
-            <select id="lang-selector" onchange="changeLanguage(this.value)" class="hc-btn" style="padding: 0.35rem 0.5rem;">
+            <select id="lang-selector" onchange="changeLanguage(this.value)" class="hc-btn" style="padding: 0.35rem 0.5rem;" aria-label="Language Selector">
                 <option value="en">English</option>
                 <option value="es">Español</option>
                 <option value="fr">Français</option>
@@ -106,7 +106,7 @@
                 </div>
 
                 <form class="chat-input-area" onsubmit="handleCopilotSubmit(event)">
-                    <input type="text" id="copilot-input" class="chat-input" placeholder="Ask about staffing, gates, or congestion reasons..." required autocomplete="off">
+                    <input type="text" id="copilot-input" class="chat-input" placeholder="Ask about staffing, gates, or congestion reasons..." required autocomplete="off" aria-label="Operations Copilot Query Input">
                     <button type="submit" class="btn-send">➔</button>
                 </form>
             </div>
