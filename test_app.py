@@ -1,4 +1,5 @@
 import os
+os.environ["TESTING"] = "true"
 import json
 import unittest
 from app import app, db
