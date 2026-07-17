@@ -306,6 +306,96 @@ class ArenaFlowTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/pdf")
 
+    def test_strict_input_validation(self):
+        # 1. Register and Login
+        from werkzeug.security import generate_password_hash
+        db.register_user("fan", generate_password_hash("fanpass"), "attendee")
+        self.client.post(
+            "/api/auth/login",
+            data=json.dumps({"username": "fan", "password": "fanpass"}),
+            content_type="application/json",
+        )
+
+        # 2. Invalid feedback scores
+        invalid_feedback = {
+            "scores": {
+                "cleanliness": 6,  # Invalid: score > 5
+            },
+            "comments": "Nice",
+        }
+        response = self.client.post(
+            "/api/feedback/submit",
+            data=json.dumps(invalid_feedback),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # 3. Invalid feedback category
+        invalid_cat = {
+            "scores": {
+                "invalid_category_name": 3,
+            },
+            "comments": "Nice",
+        }
+        response = self.client.post(
+            "/api/feedback/submit",
+            data=json.dumps(invalid_cat),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # 4. Feedback comments too long
+        long_feedback = {
+            "scores": {"cleanliness": 4},
+            "comments": "A" * 1005,
+        }
+        response = self.client.post(
+            "/api/feedback/submit",
+            data=json.dumps(long_feedback),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # 5. Lost & Found missing fields
+        missing_lf = {
+            "item_type": "Wallet",
+            "description": "Brown leather wallet",
+            # Missing location and contact
+        }
+        response = self.client.post(
+            "/api/lost-found/submit",
+            data=json.dumps(missing_lf),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # 6. Lost & Found search query too long
+        response = self.client.get("/api/lost-found/search?q=" + ("A" * 105))
+        self.assertEqual(response.status_code, 400)
+
+        # 7. Assistant chat query too long
+        response = self.client.post(
+            "/api/assistant/chat",
+            data=json.dumps({"message": "A" * 505}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_centralized_error_handling(self):
+        """Test that common HTTP errors return standardized JSON responses on API paths."""
+        # Test API 404 Not Found returns structured JSON
+        response = self.client.get("/api/nonexistent-endpoint-path")
+        self.assertEqual(response.status_code, 404)
+        data = json.loads(response.data)
+        self.assertEqual(data["status"], "error")
+        self.assertEqual(data["message"], "Resource not found")
+
+        # Test security headers are present on responses
+        self.assertEqual(response.headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(response.headers.get("X-XSS-Protection"), "1; mode=block")
+        self.assertIn("default-src 'self'", response.headers.get("Content-Security-Policy"))
+
 
 if __name__ == "__main__":
     unittest.main()

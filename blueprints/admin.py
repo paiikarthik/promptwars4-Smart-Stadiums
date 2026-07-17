@@ -1,5 +1,6 @@
 import queue
 import time
+from typing import Union, Tuple
 from flask import Blueprint, jsonify, render_template, request, session, Response
 
 from app import (
@@ -20,17 +21,21 @@ admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.route("/admin")
 @require_admin
-def admin_dashboard():
-    """Renders the Command Center dashboard."""
+def admin_dashboard() -> str:
+    """Renders the Command Center dashboard page for administrators."""
     return render_template("admin.html", username=session.get("username"))
 
 
 @admin_bp.route("/api/admin/broadcast", methods=["POST"])
 @require_admin
-def admin_broadcast():
+def admin_broadcast() -> Union[Response, Tuple[Response, int]]:
+    """Broadcasts a manual alert message to all fans and active telemetry sessions.
+
+    Validates that the message is non-empty and under 500 characters.
+    """
     data = request.json or {}
-    message = sanitize_html(data.get("message", "").strip())
-    alert_type = data.get("type", "info")
+    message: str = sanitize_html(data.get("message", "") or "").strip()
+    alert_type: str = str(data.get("type", "info"))
 
     if not message:
         return (
@@ -38,6 +43,17 @@ def admin_broadcast():
                 {
                     "status": "error",
                     "message": "Broadcast message cannot be empty",
+                }
+            ),
+            400,
+        )
+
+    if len(message) > 500:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Broadcast message cannot exceed 500 characters",
                 }
             ),
             400,
@@ -63,12 +79,13 @@ def admin_broadcast():
 
 @admin_bp.route("/api/admin/dispatch", methods=["POST"])
 @require_admin
-def admin_dispatch():
+def admin_dispatch() -> Union[Response, Tuple[Response, int]]:
+    """Dispatches emergency staff (medical or security) to a specific stadium zone."""
     data = request.json or {}
-    staff_type = data.get("type", "security")  # security or medical
-    zone_id = data.get("zone_id")
+    staff_type: str = str(data.get("type", "security"))  # security or medical
+    zone_id: str = str(data.get("zone_id", ""))
 
-    if staff_type not in ["security", "medical"] or not zone_id:
+    if staff_type not in ["security", "medical"] or not zone_id or len(zone_id) > 50:
         return (
             jsonify(
                 {"status": "error", "message": "Invalid dispatch details"}
@@ -114,7 +131,8 @@ def admin_dispatch():
 
 @admin_bp.route("/incident-report")
 @require_admin
-def incident_report_page():
+def incident_report_page() -> str:
+    """Renders the AI Incident Report generator page."""
     return render_template(
         "incident_report.html", username=session.get("username")
     )
@@ -122,20 +140,22 @@ def incident_report_page():
 
 @admin_bp.route("/api/reports/incident")
 @require_admin
-def get_incident_report():
+def get_incident_report() -> Response:
+    """Generates the text body for the operational incident report using Gemini groundings."""
     report_text = report_svc.generate_incident_report_text()
     return jsonify({"status": "success", "report": report_text})
 
 
 @admin_bp.route("/api/reports/incident/pdf")
 @require_admin
-def get_incident_report_pdf():
+def get_incident_report_pdf() -> Union[Response, Tuple[Response, int]]:
+    """Exports the incident report text to a formatted PDF download."""
     report_text = report_svc.generate_incident_report_text()
     pdf_bytes = report_svc.export_report_to_pdf(
         report_text, "Operations_Incident_Report"
     )
     if not pdf_bytes:
-        return "FPDF is not installed or PDF generation failed.", 500
+        return Response("PDF generation failed.", status=500)
 
     return Response(
         pdf_bytes,
@@ -148,7 +168,8 @@ def get_incident_report_pdf():
 
 @admin_bp.route("/api/reports/match-summary/pdf")
 @require_admin
-def get_match_summary_pdf():
+def get_match_summary_pdf() -> Union[Response, Tuple[Response, int]]:
+    """Exports the match-day summary dashboard state and recommendation log as a PDF download."""
     state = db.get_simulation_state()
     summary_text = (
         f"### ARENAFLOW MATCH SUMMARY REPORT\n\n"
@@ -166,7 +187,7 @@ def get_match_summary_pdf():
         summary_text, "Operations_Match_Summary"
     )
     if not pdf_bytes:
-        return "PDF generation failed.", 500
+        return Response("PDF generation failed.", status=500)
     return Response(
         pdf_bytes,
         mimetype="application/pdf",
@@ -180,12 +201,18 @@ def get_match_summary_pdf():
 
 @admin_bp.route("/api/copilot/chat", methods=["POST"])
 @require_admin
-def copilot_chat():
+def copilot_chat() -> Union[Response, Tuple[Response, int]]:
+    """Interfaces with the Gemini AI Operations Copilot assistant."""
     data = request.json or {}
-    message = data.get("message", "").strip()
+    message: str = str(data.get("message", "")).strip()
     if not message:
         return (
             jsonify({"status": "error", "message": "Message is required"}),
+            400,
+        )
+    if len(message) > 500:
+        return (
+            jsonify({"status": "error", "message": "Message cannot exceed 500 characters"}),
             400,
         )
     reply = report_svc.run_operations_copilot(message)
@@ -196,7 +223,8 @@ def copilot_chat():
 
 @admin_bp.route("/analytics")
 @require_admin
-def analytics_page():
+def analytics_page() -> str:
+    """Renders the detailed operations analytics page."""
     return render_template("analytics.html", username=session.get("username"))
 
 
@@ -204,19 +232,21 @@ def analytics_page():
 
 @admin_bp.route("/api/sos/list")
 @require_admin
-def get_sos_list():
+def get_sos_list() -> Response:
+    """Lists all active SOS emergency alerts sent by fans."""
     alerts = sos_svc.get_sos_alerts()
     return jsonify({"status": "success", "alerts": alerts})
 
 
 @admin_bp.route("/api/sos/update", methods=["POST"])
 @require_admin
-def update_sos():
+def update_sos() -> Union[Response, Tuple[Response, int]]:
+    """Updates the status (Accepted, Resolved, Pending) of a fan SOS alert."""
     data = request.json or {}
-    sos_id = data.get("id")
-    status = data.get("status")
+    sos_id: str = str(data.get("id", ""))
+    status: str = str(data.get("status", ""))
 
-    if not sos_id or status not in ["Accepted", "Resolved", "Pending"]:
+    if not sos_id or len(sos_id) > 100 or status not in ["Accepted", "Resolved", "Pending"]:
         return (
             jsonify(
                 {"status": "error", "message": "Invalid input parameters"}
@@ -239,12 +269,13 @@ def update_sos():
 
 @admin_bp.route("/api/lost-found/update", methods=["POST"])
 @require_admin
-def update_lost_found():
+def update_lost_found() -> Union[Response, Tuple[Response, int]]:
+    """Updates status (Claimed, Found, Lost) of an item in the Lost & Found database."""
     data = request.json or {}
-    item_id = data.get("id")
-    status = data.get("status", "Claimed")
+    item_id: str = str(data.get("id", ""))
+    status: str = str(data.get("status", "Claimed"))
 
-    if not item_id or status not in ["Claimed", "Found", "Lost"]:
+    if not item_id or len(item_id) > 100 or status not in ["Claimed", "Found", "Lost"]:
         return (
             jsonify(
                 {"status": "error", "message": "Invalid input parameters"}
@@ -280,9 +311,8 @@ def update_lost_found():
 
 @admin_bp.route("/api/feedback/summary")
 @require_auth
-def get_feedback_summary():
-    """Returns feedback metrics summary."""
-    # Importing from app directly to avoid circular dependency
+def get_feedback_summary() -> Response:
+    """Returns feedback metrics summary, including average scores."""
     from app import feedback_svc
     summary = feedback_svc.generate_feedback_summary()
     return jsonify({"status": "success", "summary": summary})

@@ -1,6 +1,7 @@
 import json
 import queue
 import time
+from typing import Union, Tuple, Dict, Any
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
 
 from app import (
@@ -22,8 +23,8 @@ core_bp = Blueprint("core", __name__)
 
 @core_bp.route("/dashboard")
 @require_auth
-def dashboard():
-    """Renders the attendee fan dashboard."""
+def dashboard() -> Union[str, Response]:
+    """Renders the attendee fan dashboard or redirects admins to the command center."""
     if session.get("role") == "admin":
         return redirect(url_for("admin.admin_dashboard"))
     return render_template("index.html", username=session.get("username"))
@@ -31,17 +32,17 @@ def dashboard():
 
 @core_bp.route("/api/telemetry", methods=["GET"])
 @require_auth
-def get_telemetry():
-    """Gets current telemetry state and alerts."""
-    state = db.get_simulation_state()
+def get_telemetry() -> Response:
+    """Gets the current real-time stadium metrics and warning alerts."""
+    state: Dict[str, Any] = db.get_simulation_state()
     alerts = db.get_alerts()
     return jsonify({"status": "success", "telemetry": state, "alerts": alerts})
 
 
 @core_bp.route("/api/stream")
 @require_auth
-def event_stream():
-    """Streams live simulation state and alerts to clients in real-time."""
+def event_stream() -> Response:
+    """Streams live stadium simulation telemetry to active frontend listeners via SSE."""
 
     def event_generator():
         q = queue.Queue(maxsize=10)
@@ -72,33 +73,72 @@ def event_stream():
 
 @core_bp.route("/api/predictions")
 @require_auth
-def get_predictions():
+def get_predictions() -> Response:
+    """Returns predictive wait-times and gate crowds using historical drift telemetry."""
     predictions = prediction_svc.get_predictions()
     return jsonify({"status": "success", "predictions": predictions})
 
 
 @core_bp.route("/feedback")
 @require_auth
-def feedback_page():
+def feedback_page() -> str:
+    """Renders the attendee feedback form page."""
     return render_template("feedback.html", username=session.get("username"))
 
 
 @core_bp.route("/api/feedback/submit", methods=["POST"])
 @require_auth
-def submit_feedback():
+def submit_feedback() -> Union[Response, Tuple[Response, int]]:
+    """Handles fan feedback submissions.
+
+    Validates that scores exist, are integer values between 1 and 5, and the comments are within bounds.
+    """
     data = request.json or {}
     scores = data.get("scores", {})
-    comments = sanitize_html(data.get("comments", ""))
+    comments: str = sanitize_html(data.get("comments", "") or "").strip()
+
+    if not isinstance(scores, dict):
+        return (
+            jsonify({"status": "error", "message": "Scores must be a JSON object"}),
+            400,
+        )
+
+    valid_categories = ["navigation", "food", "restrooms", "security", "ai_assistant"]
+    for category, val in scores.items():
+        if category not in valid_categories:
+            return (
+                jsonify({"status": "error", "message": f"Invalid score category: {category}"}),
+                400,
+            )
+        try:
+            val_int = int(val)
+            if not (1 <= val_int <= 5):
+                raise ValueError()
+            scores[category] = val_int
+        except (ValueError, TypeError):
+            return (
+                jsonify({"status": "error", "message": f"Score for {category} must be an integer between 1 and 5"}),
+                400,
+            )
+
+    if len(comments) > 1000:
+        return (
+            jsonify({"status": "error", "message": "Comments cannot exceed 1000 characters"}),
+            400,
+        )
+
     feedback = feedback_svc.submit_feedback(scores, comments)
     return jsonify({"status": "success", "feedback": feedback})
 
 
 @core_bp.route("/api/sos/send", methods=["POST"])
 @require_auth
-def send_sos():
+def send_sos() -> Union[Response, Tuple[Response, int]]:
+    """Receives and logs a fan SOS panic alert."""
     data = request.json or {}
-    seat = sanitize_html(data.get("seat", "").strip())
-    zone_id = sanitize_html(data.get("zone_id", "").strip())
+    seat: str = sanitize_html(data.get("seat", "") or "").strip()
+    zone_id: str = sanitize_html(data.get("zone_id", "") or "").strip()
+
     if not seat or not zone_id:
         return (
             jsonify(
@@ -106,6 +146,13 @@ def send_sos():
             ),
             400,
         )
+
+    if len(seat) > 50 or len(zone_id) > 50:
+        return (
+            jsonify({"status": "error", "message": "Seat or Zone ID too long"}),
+            400,
+        )
+
     sos = sos_svc.send_sos(seat, zone_id)
 
     # Broadcast to SSE listeners immediately
@@ -123,18 +170,40 @@ def send_sos():
 
 @core_bp.route("/lost-found")
 @require_auth
-def lost_found_page():
+def lost_found_page() -> str:
+    """Renders the Lost & Found visual search page."""
     return render_template("lost_found.html", username=session.get("username"))
 
 
 @core_bp.route("/api/lost-found/submit", methods=["POST"])
 @require_auth
-def submit_lost_found():
+def submit_lost_found() -> Union[Response, Tuple[Response, int]]:
+    """Registers a newly reported lost/found item.
+
+    Validates field constraints to prevent buffer overflow.
+    """
     data = request.json or {}
-    item_type = sanitize_html(data.get("item_type"))
-    description = sanitize_html(data.get("description"))
-    location = sanitize_html(data.get("location"))
-    contact = sanitize_html(data.get("contact"))
+    item_type: str = sanitize_html(data.get("item_type", "") or "").strip()
+    description: str = sanitize_html(data.get("description", "") or "").strip()
+    location: str = sanitize_html(data.get("location", "") or "").strip()
+    contact: str = sanitize_html(data.get("contact", "") or "").strip()
+
+    if not item_type or not description or not location or not contact:
+        return (
+            jsonify({"status": "error", "message": "All fields are required"}),
+            400,
+        )
+
+    if (
+        len(item_type) > 100
+        or len(description) > 500
+        or len(location) > 200
+        or len(contact) > 100
+    ):
+        return (
+            jsonify({"status": "error", "message": "Input length bounds exceeded"}),
+            400,
+        )
 
     item = {
         "id": f"lf-{time.time()}",
@@ -164,8 +233,15 @@ def submit_lost_found():
 
 @core_bp.route("/api/lost-found/search")
 @require_auth
-def search_lost_found():
-    query = request.args.get("q", "").strip().lower()
+def search_lost_found() -> Union[Response, Tuple[Response, int]]:
+    """Searches the Lost & Found database matching item descriptions."""
+    query: str = request.args.get("q", "").strip().lower()
+
+    if len(query) > 100:
+        return (
+            jsonify({"status": "error", "message": "Search query too long"}),
+            400,
+        )
 
     items = []
     if db.use_firebase:
@@ -194,13 +270,15 @@ def search_lost_found():
 
 @core_bp.route("/parking")
 @require_auth
-def parking_page():
+def parking_page() -> str:
+    """Renders the parking availability hub page."""
     return render_template("parking.html", username=session.get("username"))
 
 
 @core_bp.route("/api/parking")
 @require_auth
-def get_parking():
+def get_parking() -> Response:
+    """Returns real-time occupancy updates for all stadium parking gates."""
     seed = int(time.time()) % 10
     parking_data = [
         {
@@ -230,7 +308,8 @@ def get_parking():
 
 @core_bp.route("/notifications")
 @require_auth
-def notifications_page():
+def notifications_page() -> str:
+    """Renders the fan safety alerts and dispatches log page."""
     return render_template(
         "notifications.html", username=session.get("username")
     )
@@ -238,7 +317,8 @@ def notifications_page():
 
 @core_bp.route("/api/notifications/history")
 @require_auth
-def get_notifications_history():
+def get_notifications_history() -> Response:
+    """Returns log logs of all dispatches and alerts."""
     history = []
 
     dispatches = db.get_dispatches()
@@ -267,7 +347,8 @@ def get_notifications_history():
 
 @core_bp.route("/api/weather")
 @require_auth
-def get_weather():
+def get_weather() -> Response:
+    """Returns current weather condition advisories."""
     weather_data = {
         "temperature": 26,
         "rain_chance": 10,
@@ -281,8 +362,8 @@ def get_weather():
 
 @core_bp.route("/api/analytics/data")
 @require_auth
-def get_analytics_data_core():
-    # Importing from app directly to avoid circular dependency
+def get_analytics_data_core() -> Response:
+    """Retrieves operational statistics metrics."""
     from app import analytics_svc
     data = analytics_svc.get_analytics()
     return jsonify({"status": "success", "metrics": data})

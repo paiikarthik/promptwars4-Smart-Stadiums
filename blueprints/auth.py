@@ -1,4 +1,5 @@
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from typing import Union, Tuple
+from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, limiter, USERNAME_PATTERN, sanitize_html
@@ -7,17 +8,22 @@ auth_bp = Blueprint("auth", __name__)
 
 
 def normalize_username(raw_username: str) -> str:
+    """Sanitizes and strips the user-supplied username."""
     return sanitize_html(raw_username or "").strip()
 
 
 def is_valid_username(username: str) -> bool:
+    """Verifies that the username strictly matches the alphanumeric regex pattern."""
     return bool(USERNAME_PATTERN.match(username))
 
 
 @auth_bp.route("/")
 @auth_bp.route("/portal")
-def portal():
-    """Renders the login/registration gateway."""
+def portal() -> Union[str, Response]:
+    """Renders the login/registration gateway.
+
+    If already authenticated, redirects the user to their appropriate dashboard.
+    """
     if "username" in session:
         if session.get("role") == "admin":
             return redirect(url_for("admin.admin_dashboard"))
@@ -27,12 +33,16 @@ def portal():
 
 @auth_bp.route("/api/auth/register", methods=["POST"])
 @limiter.limit("3 per minute")
-def register():
+def register() -> Union[Response, Tuple[Response, int]]:
+    """Registers a new user account inside the database fallback / Firestore.
+
+    Validates that the username meets complexity format standards.
+    """
     data = request.json or {}
-    raw_username = data.get("username", "")
-    username = normalize_username(raw_username)
-    password = data.get("password", "")
-    role = "attendee"
+    raw_username: str = str(data.get("username", ""))
+    username: str = normalize_username(raw_username)
+    password: str = str(data.get("password", ""))
+    role: str = "attendee"
 
     if not username or not password:
         return (
@@ -70,10 +80,11 @@ def register():
 
 @auth_bp.route("/api/auth/login", methods=["POST"])
 @limiter.limit("6 per minute")
-def login():
+def login() -> Union[Response, Tuple[Response, int]]:
+    """Logs the user into their session using password hash checks."""
     data = request.json or {}
-    username = (data.get("username", "") or "").strip()
-    password = data.get("password", "")
+    username: str = str(data.get("username", "") or "").strip()
+    password: str = str(data.get("password", ""))
 
     if not username or not password:
         return (
@@ -122,7 +133,8 @@ def login():
 
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])
-def logout():
+def logout() -> Response:
+    """Logs out the current session and returns redirect URL."""
     session.clear()
     return jsonify(
         {

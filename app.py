@@ -13,6 +13,7 @@ from flask import (
     Flask,
     jsonify,
     redirect,
+    render_template,
     request,
     session,
     url_for,
@@ -220,6 +221,64 @@ def inject_csrf_token(response):
         except Exception as e:
             logger.error(f"Failed to inject CSRF token: {e}")
     return response
+
+
+# --- HTTP SECURITY HEADERS & ERROR HANDLERS ---
+
+@app.after_request
+def add_security_headers(response):
+    """Enforces standard HTTP security headers globally."""
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://maps.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com https://maps.gstatic.com https://maps.googleapis.com; "
+        "connect-src 'self' https://maps.googleapis.com; "
+        "frame-src 'none';"
+    )
+    if not app.config.get("TESTING") and not app.debug:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+@app.errorhandler(400)
+def bad_request(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": f"Bad Request: {e.description}"}), 400
+    return render_template("portal.html", error="Bad request"), 400
+
+
+@app.errorhandler(401)
+def unauthorized(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    return redirect(url_for("auth.portal")), 401
+
+
+@app.errorhandler(403)
+def forbidden(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": "Forbidden. Access denied."}), 403
+    return redirect(url_for("core.dashboard")), 403
+
+
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": "Resource not found"}), 404
+    return render_template("portal.html", error="Page not found"), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    logger.error(f"Internal Server Error: {e}")
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": "Internal Server Error"}), 500
+    return render_template("portal.html", error="An internal server error occurred"), 500
 
 
 # --- STATE DRIFT SIMULATION ENGINE ---

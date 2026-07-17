@@ -1,6 +1,7 @@
 import time
 import os
-from flask import Blueprint, jsonify, request
+from typing import Dict, Any, Union, Tuple
+from flask import Blueprint, jsonify, request, Response
 
 from app import (
     require_auth,
@@ -13,8 +14,11 @@ from app import (
 assistant_bp = Blueprint("assistant", __name__)
 
 
-def local_concierge_fallback(query, telemetry):
-    """Fallback logic for Stadium Concierge if Gemini API key is missing."""
+def local_concierge_fallback(query: str, telemetry: Dict[str, Any]) -> str:
+    """Fallback logic for Stadium Concierge if Gemini API key is missing.
+
+    Evaluates keyword matches on gate status, food stalls, restrooms, and density.
+    """
     query = query.lower()
 
     # Simple PII warning check
@@ -146,13 +150,24 @@ def local_concierge_fallback(query, telemetry):
 
 @assistant_bp.route("/api/assistant/chat", methods=["POST"])
 @require_auth
-def assistant_chat():
+def assistant_chat() -> Union[Response, Tuple[Response, int]]:
+    """Grounded AI Chat Concierge Endpoint.
+
+    Checks user inputs, queries the Gemini model grounding with live telemetry data,
+    and returns a structured Markdown response.
+    """
     data = request.json or {}
-    user_query = data.get("message", "").strip()
+    user_query: str = str(data.get("message", "")).strip()
 
     if not user_query:
         return (
             jsonify({"status": "error", "message": "Message cannot be empty"}),
+            400,
+        )
+
+    if len(user_query) > 500:
+        return (
+            jsonify({"status": "error", "message": "Message exceeds maximum allowed length of 500 characters"}),
             400,
         )
 
