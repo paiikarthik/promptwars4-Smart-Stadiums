@@ -1,3 +1,28 @@
+// Global fetch interceptor to automatically inject CSRF tokens for mutating requests
+(function() {
+    const originalFetch = window.fetch;
+    window.fetch = async function(resource, options = {}) {
+        const method = (options.method || 'GET').toUpperCase();
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                options.headers = options.headers || {};
+                if (options.headers instanceof Headers) {
+                    options.headers.set('X-CSRFToken', csrfToken);
+                } else if (Array.isArray(options.headers)) {
+                    const hasCsrf = options.headers.some(([k]) => k.toLowerCase() === 'x-csrf-token');
+                    if (!hasCsrf) {
+                        options.headers.push(['X-CSRFToken', csrfToken]);
+                    }
+                } else {
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+        }
+        return originalFetch(resource, options);
+    };
+})();
+
 // --- SYSTEM GATEWAY: SIGN IN & REGISTER TOGGLES ---
 
 function showForm(mode) {

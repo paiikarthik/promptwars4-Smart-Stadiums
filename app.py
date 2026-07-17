@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import queue
@@ -12,17 +11,15 @@ from urllib.parse import urlparse
 
 from flask import (
     Flask,
-    Response,
     jsonify,
     redirect,
-    render_template,
     request,
     session,
     url_for,
 )
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 
 from firebase_helper import StadiumDB
 from services.analytics_service import AnalyticsService
@@ -47,14 +44,10 @@ except ImportError:
     HAS_GENAI = False
 
 # Constants
-DEFAULT_SESSION_SECRET = "arenaflow-secure-session-key-2026"
-DEFAULT_RATE_LIMITS = {
-    "register": "3 per minute",
-    "login": "6 per minute",
-}
 USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
 app = Flask(__name__)
+csrf = CSRFProtect(app)
 
 # Secure key for sessions - require SECRET_KEY in production
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -69,12 +62,14 @@ if not SECRET_KEY:
             "Refusing to start without SECRET_KEY set."
         )
         sys.exit(1)
-    # Allow a non-production fallback for local/testing only
-    SECRET_KEY = DEFAULT_SESSION_SECRET
+    # Generate cryptographically secure random session key for local/testing fallback
+    SECRET_KEY = os.urandom(24).hex()
 
 app.secret_key = SECRET_KEY
 app.config["TESTING"] = IS_TESTING_ENV
 app.config["RATELIMIT_ENABLED"] = not IS_TESTING_ENV
+
+# Session Cookie Hardening
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = not IS_TESTING_ENV and not app.debug
@@ -85,13 +80,28 @@ limiter = Limiter(key_func=get_remote_address, app=app, default_limits=[])
 # Initialize database
 db = StadiumDB()
 
+# Global state copy for active SSE connections
+current_state_lock = threading.Lock()
+current_state = db.get_simulation_state()
+
+# List of SSE connection queues
+sse_listeners = []
+sse_lock = threading.Lock()
+
+# Google AI Client
+gemini_client = None
+if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
+    try:
+        gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        logger.info("[AI] Google GenAI client initialized successfully.")
+    except Exception as e:
+        logger.error(f"[AI] GenAI initialization failed: {e}")
+
+
 # --- INPUT SANITIZATION UTILITY ---
 
-
 def sanitize_html(text):
-    """Sanitize user-provided text for safe rendering in templates and JSON
-    responses.
-    """
+    """Strips HTML script tags and normalizes input to prevent XSS injection."""
     if not isinstance(text, str):
         return text
     # Remove script tag elements entirely
@@ -101,7 +111,7 @@ def sanitize_html(text):
         text,
         flags=re.IGNORECASE,
     )
-    # Strip any remaining HTML tags
+    # Strip HTML tags
     clean = re.sub(r"<[^>]+>", "", clean)
     # Escape special characters
     clean = (
@@ -114,8 +124,42 @@ def sanitize_html(text):
     return clean.strip()
 
 
-def is_testing_environment() -> bool:
-    return bool(app.config.get("TESTING", False))
+# --- ROLE-BASED ACCESS CONTROL DECORATORS ---
+
+def require_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "username" not in session:
+            if request.path.startswith("/api/"):
+                return jsonify({"status": "error", "message": "Unauthorized"}), 401
+            return redirect(url_for("auth.portal"))
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_admin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "username" not in session:
+            if request.path.startswith("/api/"):
+                return jsonify({"status": "error", "message": "Unauthorized"}), 401
+            return redirect(url_for("auth.portal"))
+        if session.get("role") != "admin":
+            if request.path.startswith("/api/"):
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Forbidden. Admin access required.",
+                        }
+                    ),
+                    403,
+                )
+            return redirect(url_for("core.dashboard"))
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 def is_safe_origin_or_referer() -> bool:
@@ -139,9 +183,6 @@ def is_safe_origin_or_referer() -> bool:
     return bool(origin or referer)
 
 
-# --- CSRF PROTECTION HOOK ---
-
-
 @app.before_request
 def check_csrf():
     """CSRF Prevention: Verifies Origin/Referer for state-mutating requests."""
@@ -149,7 +190,7 @@ def check_csrf():
         return
 
     if (
-        is_testing_environment()
+        app.config.get("TESTING")
         or request.headers.get("User-Agent") == "Werkzeug/3.1.3"
     ):
         return
@@ -163,70 +204,25 @@ def check_csrf():
         )
 
 
-# Global state copy for active SSE connections
-current_state_lock = threading.Lock()
-current_state = db.get_simulation_state()
+# --- DYNAMIC CSRF META TAG INJECTION HOOK ---
 
-# List of SSE connection queues
-sse_listeners = []
-sse_lock = threading.Lock()
-
-# Google AI Client
-gemini_client = None
-if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
-    try:
-        gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-        logger.info("[AI] Google GenAI client initialized successfully.")
-    except Exception as e:
-        logger.error(f"[AI] GenAI initialization failed: {e}")
-
-# --- ROLE-BASED ACCESS CONTROL DECORATORS ---
-
-
-def require_auth(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "username" not in session:
-            if request.path.startswith("/api/"):
-                return (
-                    jsonify({"status": "error", "message": "Unauthorized"}),
-                    401,
-                )
-            return redirect(url_for("portal"))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
-def require_admin(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "username" not in session:
-            if request.path.startswith("/api/"):
-                return (
-                    jsonify({"status": "error", "message": "Unauthorized"}),
-                    401,
-                )
-            return redirect(url_for("portal"))
-        if session.get("role") != "admin":
-            if request.path.startswith("/api/"):
-                return (
-                    jsonify(
-                        {
-                            "status": "error",
-                            "message": "Forbidden. Admin access required.",
-                        }
-                    ),
-                    403,
-                )
-            return redirect(url_for("dashboard"))
-        return f(*args, **kwargs)
-
-    return decorated_function
+@app.after_request
+def inject_csrf_token(response):
+    """Dynamically injects CSRF meta tag into HTML responses."""
+    if response.mimetype == "text/html":
+        try:
+            html = response.get_data(as_text=True)
+            token = generate_csrf()
+            meta_tag = f'\n    <meta name="csrf-token" content="{token}">'
+            if "<head>" in html:
+                html = html.replace("<head>", f"<head>{meta_tag}", 1)
+                response.set_data(html)
+        except Exception as e:
+            logger.error(f"Failed to inject CSRF token: {e}")
+    return response
 
 
 # --- STATE DRIFT SIMULATION ENGINE ---
-
 
 def drift_simulation():
     """Background thread function that drifts the state every 5 seconds."""
@@ -305,519 +301,12 @@ def drift_simulation():
                 try:
                     listener.put_nowait(payload)
                 except queue.Full:
-                    # Queue is full, consumer likely disconnected
                     pass
 
 
 # Start background thread
 simulation_thread = threading.Thread(target=drift_simulation, daemon=True)
 simulation_thread.start()
-
-# --- WEB PAGE ROUTES ---
-
-
-@app.route("/")
-def portal():
-    """Renders the login/registration gateway."""
-    if "username" in session:
-        if session.get("role") == "admin":
-            return redirect(url_for("admin_dashboard"))
-        return redirect(url_for("dashboard"))
-    return render_template("portal.html")
-
-
-@app.route("/dashboard")
-@require_auth
-def dashboard():
-    """Renders the attendee fan dashboard."""
-    if session.get("role") == "admin":
-        return redirect(url_for("admin_dashboard"))
-    return render_template("index.html", username=session.get("username"))
-
-
-@app.route("/admin")
-@require_admin
-def admin_dashboard():
-    """Renders the Command Center dashboard."""
-    return render_template("admin.html", username=session.get("username"))
-
-
-# --- AUTHENTICATION API ENDPOINTS ---
-
-
-def normalize_username(raw_username: str) -> str:
-    username = sanitize_html(raw_username or "").strip()
-    return username
-
-
-def is_valid_username(username: str) -> bool:
-    return bool(USERNAME_PATTERN.match(username))
-
-
-@app.route("/api/auth/register", methods=["POST"])
-@limiter.limit(DEFAULT_RATE_LIMITS["register"])
-def register():
-    data = request.json or {}
-    raw_username = data.get("username", "")
-    username = normalize_username(raw_username)
-    password = data.get("password", "")
-    role = "attendee"
-
-    if not username or not password:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Username and password are required",
-                }
-            ),
-            400,
-        )
-
-    if raw_username != username or not is_valid_username(username):
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Username must be alphanumeric or contain only _ or -",
-                }
-            ),
-            400,
-        )
-
-    password_hash = generate_password_hash(password)
-    success = db.register_user(username, password_hash, role)
-    if success:
-        return jsonify(
-            {"status": "success", "message": "User registered successfully"}
-        )
-    return (
-        jsonify({"status": "error", "message": "Username already exists"}),
-        400,
-    )
-
-
-@app.route("/api/auth/login", methods=["POST"])
-@limiter.limit(DEFAULT_RATE_LIMITS["login"])
-def login():
-    data = request.json or {}
-    username = (data.get("username", "") or "").strip()
-    password = data.get("password", "")
-
-    if not username or not password:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Username and password are required",
-                }
-            ),
-            400,
-        )
-
-    if not USERNAME_PATTERN.match(username):
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Invalid username format",
-                }
-            ),
-            400,
-        )
-
-    user = db.get_user(username)
-    if user and check_password_hash(user["password_hash"], password):
-        session["username"] = user["username"]
-        session["role"] = user["role"]
-        return jsonify(
-            {
-                "status": "success",
-                "username": user["username"],
-                "role": user["role"],
-                "redirect": (
-                    url_for("admin_dashboard")
-                    if user["role"] == "admin"
-                    else url_for("dashboard")
-                ),
-            }
-        )
-    return (
-        jsonify(
-            {"status": "error", "message": "Invalid username or password"}
-        ),
-        401,
-    )
-
-
-@app.route("/api/auth/logout", methods=["POST"])
-def logout():
-    session.clear()
-    return jsonify(
-        {
-            "status": "success",
-            "message": "Logged out successfully",
-            "redirect": url_for("portal"),
-        }
-    )
-
-
-# --- TELEMETRY API ENDPOINTS ---
-
-
-@app.route("/api/telemetry", methods=["GET"])
-@require_auth
-def get_telemetry():
-    """Gets current telemetry state and alerts."""
-    state = db.get_simulation_state()
-    alerts = db.get_alerts()
-    return jsonify({"status": "success", "telemetry": state, "alerts": alerts})
-
-
-# --- ADMIN API ENDPOINTS ---
-
-
-@app.route("/api/admin/broadcast", methods=["POST"])
-@require_admin
-def admin_broadcast():
-    data = request.json or {}
-    message = sanitize_html(data.get("message", "").strip())
-    alert_type = data.get("type", "info")
-
-    if not message:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Broadcast message cannot be empty",
-                }
-            ),
-            400,
-        )
-
-    if alert_type not in ["info", "warning", "danger", "success"]:
-        alert_type = "info"
-
-    alert = db.add_alert(message, alert_type, auto=False)
-
-    # Broadcast to SSE streams immediately
-    with sse_lock:
-        fresh_alerts = db.get_alerts()
-        payload = {"telemetry": current_state, "alerts": fresh_alerts}
-        for listener in list(sse_listeners):
-            try:
-                listener.put_nowait(payload)
-            except queue.Full:
-                pass
-
-    return jsonify({"status": "success", "alert": alert})
-
-
-@app.route("/api/admin/dispatch", methods=["POST"])
-@require_admin
-def admin_dispatch():
-    data = request.json or {}
-    staff_type = data.get("type", "security")  # security or medical
-    zone_id = data.get("zone_id")
-
-    if staff_type not in ["security", "medical"] or not zone_id:
-        return (
-            jsonify(
-                {"status": "error", "message": "Invalid dispatch details"}
-            ),
-            400,
-        )
-
-    with current_state_lock:
-        state = db.get_simulation_state()
-        if state["staff"][staff_type]["available"] > 0:
-            state["staff"][staff_type]["available"] -= 1
-            state["staff"][staff_type]["deployed"].append(
-                {"zone_id": zone_id, "timestamp": time.time()}
-            )
-            db.save_simulation_state(state)
-            db.log_dispatch(staff_type, zone_id)
-
-            # Immediately notify listeners of staff change
-            with sse_lock:
-                payload = {"telemetry": state, "alerts": db.get_alerts()}
-                for listener in list(sse_listeners):
-                    try:
-                        listener.put_nowait(payload)
-                    except queue.Full:
-                        pass
-
-            return jsonify(
-                {
-                    "status": "success",
-                    "message": f"{staff_type.capitalize()} unit dispatched successfully.",
-                }
-            )
-
-    return (
-        jsonify(
-            {"status": "error", "message": f"No available {staff_type} units."}
-        ),
-        400,
-    )
-
-
-# --- SERVER-SENT EVENTS (SSE) STREAMING ---
-
-
-@app.route("/api/stream")
-@require_auth
-def event_stream():
-    """Streams live simulation state and alerts to clients in real-time."""
-
-    def event_generator():
-        q = queue.Queue(maxsize=10)
-        with sse_lock:
-            sse_listeners.append(q)
-
-        # Push initial data immediately
-        initial_alerts = db.get_alerts()
-        with current_state_lock:
-            initial_payload = {
-                "telemetry": current_state,
-                "alerts": initial_alerts,
-            }
-        yield f"data: {json.dumps(initial_payload)}\n\n"
-
-        try:
-            while True:
-                # Wait for next simulation/alert update
-                data = q.get()
-                yield f"data: {json.dumps(data)}\n\n"
-        except GeneratorExit:
-            # Client disconnected
-            with sse_lock:
-                if q in sse_listeners:
-                    sse_listeners.remove(q)
-
-    return Response(event_generator(), mimetype="text/event-stream")
-
-
-# --- AI CONCIERGE CHATBOT ENDPOINT ---
-
-
-def local_concierge_fallback(query, telemetry):
-    """Fallback logic for Stadium Concierge if Gemini API key is missing."""
-    query = query.lower()
-
-    # Simple PII warning check
-    if (
-        "ssn" in query
-        or "password" in query
-        or "aadhaar" in query
-        or "credit card" in query
-    ):
-        return "⚠️ **Security Warning**: Please do not share any sensitive personal information such as passwords, SSNs, Aadhaar, or credit card details. I do not need this data to assist you."
-
-    # Extract current metrics
-    gates = telemetry.get("gates", [])
-    zones = telemetry.get("zones", [])
-    amenities = telemetry.get("amenities", [])
-
-    # 1. Gate questions
-    if "gate" in query or "entrance" in query or "enter" in query:
-        if gates:
-            sorted_gates = sorted(gates, key=lambda x: x["waitTimeMinutes"])
-            fastest = sorted_gates[0]
-            others_str = ", ".join(
-                [
-                    f"**{g['name']}** ({g['waitTimeMinutes']} mins)"
-                    for g in sorted_gates[1:]
-                ]
-            )
-            return (
-                f"🏟️ **Fastest Entry Point**: I recommend using **{fastest['name']}** which has a wait time of only **{fastest['waitTimeMinutes']} minutes**.\n\n"
-                f"Other entrances: {others_str}.\n\n"
-                f"Do you need directions to this gate?"
-            )
-        return "I can't access gate wait times right now. Generally, the North and West Gates have shorter lines."
-
-    # 2. Food / Drink questions
-    if (
-        "food" in query
-        or "drink" in query
-        or "pizza" in query
-        or "beer" in query
-        or "eat" in query
-        or "restaurant" in query
-    ):
-        food_items = [am for am in amenities if am["type"] == "food"]
-        if food_items:
-            sorted_food = sorted(
-                food_items, key=lambda x: x["waitTimeMinutes"]
-            )
-            best = sorted_food[0]
-            others_str = ", ".join(
-                [
-                    f"**{f['name']}** ({f['waitTimeMinutes']} mins)"
-                    for f in sorted_food[1:]
-                ]
-            )
-            return (
-                f"🍕 **Food & Drink Recommendation**: The **{best['name']}** currently has the shortest line, with a wait time of **{best['waitTimeMinutes']} minutes**.\n\n"
-                f"Other stands: {others_str}.\n\n"
-                f"Would you like me to find the nearest restroom on your way there?"
-            )
-        return "The Food Court is currently busy. Pizza Stand and Drinks Tent are available on the East and South Concourses."
-
-    # 3. Washroom / Restroom questions
-    if (
-        "restroom" in query
-        or "washroom" in query
-        or "toilet" in query
-        or "loo" in query
-    ):
-        restrooms = [am for am in amenities if am["type"] == "restroom"]
-        if restrooms:
-            sorted_restrooms = sorted(
-                restrooms, key=lambda x: x["waitTimeMinutes"]
-            )
-            best = sorted_restrooms[0]
-            return (
-                f"🚻 **Nearest Restroom**: The **{best['name']}** is your best option with a wait time of only **{best['waitTimeMinutes']} minutes**.\n\n"
-                f"The other option (**{sorted_restrooms[1]['name']}**) currently has a **{sorted_restrooms[1]['waitTimeMinutes']} minute** wait.\n\n"
-                f"Do you need to know if it has accessible stalls?"
-            )
-        return "Washrooms are located near the North Concourse and the Main Entrance. The Main washroom usually moves fastest."
-
-    # 4. Crowd / Concourse density questions
-    if (
-        "crowd" in query
-        or "concourse" in query
-        or "busy" in query
-        or "congested" in query
-    ):
-        congested = [z for z in zones if z["crowdLevel"] > 75]
-        clear = [z for z in zones if z["crowdLevel"] < 45]
-
-        reply = "📊 **Stadium Density Report**:\n"
-        if congested:
-            reply += (
-                "- **High Congestion Zones (Avoid)**: "
-                + ", ".join(
-                    [
-                        f"**{z['name']}** ({z['crowdLevel']}% full)"
-                        for z in congested
-                    ]
-                )
-                + "\n"
-            )
-        if clear:
-            reply += (
-                "- **Clear Zones**: "
-                + ", ".join(
-                    [
-                        f"**{z['name']}** ({z['crowdLevel']}% full)"
-                        for z in clear
-                    ]
-                )
-                + "\n"
-            )
-
-        reply += "\nI suggest routing your movement through Clear Zones to avoid bottlenecks. Can I help plan an alternative route?"
-        return reply
-
-    return (
-        "Hi there! I am your **AI Stadium Concierge** 🤖.\n\n"
-        "I can help you navigate the stadium in real-time based on live crowds and telemetry. Try asking:\n"
-        "- *Which gate is fastest to enter?*\n"
-        "- *Where can I grab food with the shortest queue?*\n"
-        "- *What washroom should I use right now?*\n"
-        "- *Which areas of the stadium are overcrowded?*"
-    )
-
-
-@app.route("/api/assistant/chat", methods=["POST"])
-@require_auth
-def assistant_chat():
-    data = request.json or {}
-    user_query = data.get("message", "").strip()
-
-    if not user_query:
-        return (
-            jsonify({"status": "error", "message": "Message cannot be empty"}),
-            400,
-        )
-
-    # Get current state to ground the prompt
-    with current_state_lock:
-        state = db.get_simulation_state()
-
-    # Build a rich grounding context with current telemetry
-    telemetry_summary = f"""
-    Current Stadium Telemetry context:
-    - Overall Occupancy: {state.get('occupancy')} / {state.get('capacity')}
-    - Gates Status:
-      * {state.get('gates')[0]['name']}: {state.get('gates')[0]['waitTimeMinutes']} min wait
-      * {state.get('gates')[1]['name']}: {state.get('gates')[1]['waitTimeMinutes']} min wait
-      * {state.get('gates')[2]['name']}: {state.get('gates')[2]['waitTimeMinutes']} min wait
-      * {state.get('gates')[3]['name']}: {state.get('gates')[3]['waitTimeMinutes']} min wait
-    - Concourse Zones Density:
-      * {state.get('zones')[0]['name']}: {state.get('zones')[0]['crowdLevel']}% full
-      * {state.get('zones')[1]['name']}: {state.get('zones')[1]['crowdLevel']}% full
-      * {state.get('zones')[2]['name']}: {state.get('zones')[2]['crowdLevel']}% full
-      * {state.get('zones')[3]['name']}: {state.get('zones')[3]['crowdLevel']}% full
-      * {state.get('zones')[4]['name']}: {state.get('zones')[4]['crowdLevel']}% full
-      * {state.get('zones')[5]['name']}: {state.get('zones')[5]['crowdLevel']}% full
-    - Amenities wait times:
-      * {state.get('amenities')[0]['name']} (restroom): {state.get('amenities')[0]['waitTimeMinutes']} mins
-      * {state.get('amenities')[1]['name']} (restroom): {state.get('amenities')[1]['waitTimeMinutes']} mins
-      * {state.get('amenities')[2]['name']} (food): {state.get('amenities')[2]['waitTimeMinutes']} mins
-      * {state.get('amenities')[3]['name']} (food): {state.get('amenities')[3]['waitTimeMinutes']} mins
-    """
-
-    system_context = f"""
-    You are ArenaFlow's Grounded AI Stadium Concierge 🤖, helping attendees navigate the physical venue.
-    Use the current live telemetry data provided below to answer queries.
-
-    {telemetry_summary}
-
-    CRITICAL RULES:
-    1. NEVER ask for or store sensitive personal information (Aadhaar, SSN, passwords, credit cards). If the user mentions them, warn them clearly.
-    2. Provide step-by-step navigation instructions using actual data points (e.g. recommend the gate/washroom/food stall with the MINIMUM wait time).
-    3. Keep explanations clear, structured, and easy to read using Markdown (bolding, lists).
-    4. Conclude your recommendations with a helpful follow-up question (e.g., "Do you want directions?" or "Should I check food queues near your seat?").
-    5. Keep responses concise and focused on crowd/stadium logistics.
-
-    User Query: {user_query}
-    """
-
-    response_text = ""
-    is_ai = False
-
-    if gemini_client:
-        try:
-            response = gemini_client.models.generate_content(
-                model="gemini-1.5-flash", contents=system_context
-            )
-            response_text = response.text
-            is_ai = True
-        except Exception as e:
-            logger.error(
-                f"[AI] Gemini model generation failed: {e}. Falling back to rule-based."
-            )
-
-    if not is_ai:
-        # Fallback to local rule-based engine
-        response_text = local_concierge_fallback(user_query, state)
-        if os.environ.get("GEMINI_API_KEY"):
-            response_text += "\n\n*(Using local rule-based assistant fallback due to Gemini error)*"
-        else:
-            response_text += "\n\n*(Using local rule-based assistant - set GEMINI_API_KEY environment variable for full AI capabilities)*"
-
-    return jsonify(
-        {
-            "status": "success",
-            "message": response_text,
-            "model": "Gemini-1.5-Flash" if is_ai else "Rule-based Engine",
-            "timestamp": time.time(),
-        }
-    )
 
 
 # --- ARENAFLOW NEW EXTENSIONS MODULES ---
@@ -829,395 +318,17 @@ sos_svc = SOSService(db)
 report_svc = ReportService(db)
 
 
-# 1. AI Incident Report Generator Page & API
-@app.route("/incident-report")
-@require_admin
-def incident_report_page():
-    return render_template(
-        "incident_report.html", username=session.get("username")
-    )
+# --- BLUEPRINTS REGISTRATION ---
 
+from blueprints.auth import auth_bp  # noqa: E402
+from blueprints.admin import admin_bp  # noqa: E402
+from blueprints.core import core_bp  # noqa: E402
+from blueprints.assistant import assistant_bp  # noqa: E402
 
-@app.route("/api/reports/incident")
-@require_admin
-def get_incident_report():
-    report_text = report_svc.generate_incident_report_text()
-    return jsonify({"status": "success", "report": report_text})
-
-
-@app.route("/api/reports/incident/pdf")
-@require_admin
-def get_incident_report_pdf():
-    report_text = report_svc.generate_incident_report_text()
-    pdf_bytes = report_svc.export_report_to_pdf(
-        report_text, "Operations_Incident_Report"
-    )
-    if not pdf_bytes:
-        return "FPDF is not installed or PDF generation failed.", 500
-
-    return Response(
-        pdf_bytes,
-        mimetype="application/pdf",
-        headers={
-            "Content-Disposition": "attachment;filename=operations_incident_report.pdf"
-        },
-    )
-
-
-@app.route("/api/reports/match-summary/pdf")
-@require_admin
-def get_match_summary_pdf():
-    state = db.get_simulation_state()
-    summary_text = (
-        f"### ARENAFLOW MATCH SUMMARY REPORT\n\n"
-        f"**Match Day Metrics**:\n"
-        f"- Final Recorded Attendance: {state.get('occupancy', 0)} / {state.get('capacity', 70000)}\n"
-        f"- Active Alerts Count: {len(db.get_alerts())}\n"
-        f"- Staff Dispatches Logged: {len(db.get_dispatches())}\n\n"
-        f"**Security Dispatches**: {len([d for d in db.get_dispatches() if d.get('staff_type') == 'security'])}\n"
-        f"**Medical Dispatches**: {len([d for d in db.get_dispatches() if d.get('staff_type') == 'medical'])}\n\n"
-        f"**AI Copilot Operational Recommendations**:\n"
-        f"- Shift ticketing flows to West Gate during entry rushes.\n"
-        f"- Keep two standby medical units on South Concourse to manage food congestion."
-    )
-    pdf_bytes = report_svc.export_report_to_pdf(
-        summary_text, "Operations_Match_Summary"
-    )
-    if not pdf_bytes:
-        return "PDF generation failed.", 500
-    return Response(
-        pdf_bytes,
-        mimetype="application/pdf",
-        headers={
-            "Content-Disposition": "attachment;filename=match_summary.pdf"
-        },
-    )
-
-
-# 2. AI Operations Copilot API
-@app.route("/api/copilot/chat", methods=["POST"])
-@require_admin
-def copilot_chat():
-    data = request.json or {}
-    message = data.get("message", "").strip()
-    if not message:
-        return (
-            jsonify({"status": "error", "message": "Message is required"}),
-            400,
-        )
-    reply = report_svc.run_operations_copilot(message)
-    return jsonify({"status": "success", "message": reply})
-
-
-# 3. Analytics Dashboard Page & API
-@app.route("/analytics")
-@require_admin
-def analytics_page():
-    return render_template("analytics.html", username=session.get("username"))
-
-
-@app.route("/api/analytics/data")
-@require_admin
-def get_analytics_data():
-    data = analytics_svc.get_analytics()
-    return jsonify({"status": "success", "metrics": data})
-
-
-# 4. Crowd Prediction Engine API
-@app.route("/api/predictions")
-@require_auth
-def get_predictions():
-    predictions = prediction_svc.get_predictions()
-    return jsonify({"status": "success", "predictions": predictions})
-
-
-# 5. Fan Feedback System Page & API
-@app.route("/feedback")
-@require_auth
-def feedback_page():
-    return render_template("feedback.html", username=session.get("username"))
-
-
-@app.route("/api/feedback/submit", methods=["POST"])
-@require_auth
-def submit_feedback():
-    data = request.json or {}
-    scores = data.get("scores", {})
-    comments = sanitize_html(data.get("comments", ""))
-    feedback = feedback_svc.submit_feedback(scores, comments)
-    return jsonify({"status": "success", "feedback": feedback})
-
-
-@app.route("/api/feedback/summary")
-@require_auth
-def get_feedback_summary():
-    summary = feedback_svc.generate_feedback_summary()
-    return jsonify({"status": "success", "summary": summary})
-
-
-# 6. Emergency SOS Module API
-@app.route("/api/sos/send", methods=["POST"])
-@require_auth
-def send_sos():
-    data = request.json or {}
-    seat = sanitize_html(data.get("seat", "").strip())
-    zone_id = sanitize_html(data.get("zone_id", "").strip())
-    if not seat or not zone_id:
-        return (
-            jsonify(
-                {"status": "error", "message": "Seat and Zone ID are required"}
-            ),
-            400,
-        )
-    sos = sos_svc.send_sos(seat, zone_id)
-
-    # Broadcast to SSE listeners immediately
-    with sse_lock:
-        fresh_alerts = db.get_alerts()
-        payload = {"telemetry": current_state, "alerts": fresh_alerts}
-        for listener in list(sse_listeners):
-            try:
-                listener.put_nowait(payload)
-            except queue.Full:
-                pass
-
-    return jsonify({"status": "success", "sos": sos})
-
-
-@app.route("/api/sos/list")
-@require_admin
-def get_sos_list():
-    alerts = sos_svc.get_sos_alerts()
-    return jsonify({"status": "success", "alerts": alerts})
-
-
-@app.route("/api/sos/update", methods=["POST"])
-@require_admin
-def update_sos():
-    data = request.json or {}
-    sos_id = data.get("id")
-    status = data.get("status")
-
-    if not sos_id or status not in ["Accepted", "Resolved", "Pending"]:
-        return (
-            jsonify(
-                {"status": "error", "message": "Invalid input parameters"}
-            ),
-            400,
-        )
-
-    success = sos_svc.update_sos_status(sos_id, status)
-    if success:
-        return jsonify({"status": "success", "message": "SOS status updated."})
-    return (
-        jsonify(
-            {"status": "error", "message": "Failed to update SOS status."}
-        ),
-        400,
-    )
-
-
-# 7. Lost & Found Module Page & API
-@app.route("/lost-found")
-@require_auth
-def lost_found_page():
-    return render_template("lost_found.html", username=session.get("username"))
-
-
-@app.route("/api/lost-found/submit", methods=["POST"])
-@require_auth
-def submit_lost_found():
-    data = request.json or {}
-    item_type = sanitize_html(data.get("item_type"))
-    description = sanitize_html(data.get("description"))
-    location = sanitize_html(data.get("location"))
-    contact = sanitize_html(data.get("contact"))
-
-    item = {
-        "id": f"lf-{time.time()}",
-        "item_type": item_type,
-        "description": description,
-        "location": location,
-        "contact": contact,
-        "status": "Found",
-        "timestamp": time.time(),
-    }
-
-    if db.use_firebase:
-        try:
-            db.db.collection("lost_found").document(item["id"]).set(item)
-        except Exception as e:
-            logger.error(f"[LostFound] Firebase error: {e}")
-    else:
-        with db.lock:
-            local_data = db._read_local_db()
-            if "lost_found" not in local_data:
-                local_data["lost_found"] = []
-            local_data["lost_found"].append(item)
-            db._write_local_db(local_data)
-
-    return jsonify({"status": "success", "item": item})
-
-
-@app.route("/api/lost-found/search")
-@require_auth
-def search_lost_found():
-    query = request.args.get("q", "").strip().lower()
-
-    items = []
-    if db.use_firebase:
-        try:
-            docs = db.db.collection("lost_found").stream()
-            items = [doc.to_dict() for doc in docs]
-        except Exception as e:
-            logger.error(f"[LostFound] Firebase read error: {e}")
-    else:
-        with db.lock:
-            local_data = db._read_local_db()
-            items = local_data.get("lost_found", [])
-
-    if query:
-        items = [
-            i
-            for i in items
-            if query in i["item_type"].lower()
-            or query in i["description"].lower()
-            or query in i["location"].lower()
-        ]
-
-    items = sorted(items, key=lambda x: x["timestamp"], reverse=True)
-    return jsonify({"status": "success", "items": items})
-
-
-@app.route("/api/lost-found/update", methods=["POST"])
-@require_admin
-def update_lost_found():
-    data = request.json or {}
-    item_id = data.get("id")
-    status = data.get("status", "Claimed")
-
-    if not item_id or status not in ["Claimed", "Found", "Lost"]:
-        return (
-            jsonify(
-                {"status": "error", "message": "Invalid input parameters"}
-            ),
-            400,
-        )
-
-    if db.use_firebase:
-        try:
-            ref = db.db.collection("lost_found").document(item_id)
-            if ref.get().exists:
-                ref.update({"status": status})
-                return jsonify({"status": "success"})
-        except Exception as e:
-            logger.error(f"[LostFound] Firebase update error: {e}")
-    else:
-        with db.lock:
-            local_data = db._read_local_db()
-            found = False
-            for item in local_data.get("lost_found", []):
-                if item["id"] == item_id:
-                    item["status"] = status
-                    found = True
-                    break
-            if found:
-                db._write_local_db(local_data)
-                return jsonify({"status": "success"})
-    return (
-        jsonify({"status": "error", "message": "Failed to update item"}),
-        400,
-    )
-
-
-# 8. Parking Management Page & API
-@app.route("/parking")
-@require_auth
-def parking_page():
-    return render_template("parking.html", username=session.get("username"))
-
-
-@app.route("/api/parking")
-@require_auth
-def get_parking():
-    seed = int(time.time()) % 10
-    parking_data = [
-        {
-            "id": "park-a",
-            "name": "Parking A (North Gate)",
-            "total_slots": 500,
-            "occupied": 420 + seed,
-            "walking_time_mins": 3,
-        },
-        {
-            "id": "park-b",
-            "name": "Parking B (South Gate)",
-            "total_slots": 800,
-            "occupied": 680 - seed,
-            "walking_time_mins": 5,
-        },
-        {
-            "id": "park-c",
-            "name": "Parking C (VIP / East)",
-            "total_slots": 300,
-            "occupied": 290 + (seed % 3),
-            "walking_time_mins": 8,
-        },
-    ]
-    return jsonify({"status": "success", "parking": parking_data})
-
-
-# 9. Notification History API
-@app.route("/notifications")
-@require_auth
-def notifications_page():
-    return render_template(
-        "notifications.html", username=session.get("username")
-    )
-
-
-@app.route("/api/notifications/history")
-@require_auth
-def get_notifications_history():
-    history = []
-
-    dispatches = db.get_dispatches()
-    for d in dispatches:
-        history.append(
-            {
-                "message": f"Dispatched {d['staff_type'].capitalize()} unit to Zone {d['zone_id']}",
-                "type": d["staff_type"],
-                "timestamp": d["timestamp"],
-            }
-        )
-
-    alerts = db.get_alerts()
-    for a in alerts:
-        history.append(
-            {
-                "message": a["message"],
-                "type": a["type"],
-                "timestamp": a["timestamp"],
-            }
-        )
-
-    history = sorted(history, key=lambda x: x["timestamp"], reverse=True)
-    return jsonify({"status": "success", "history": history})
-
-
-# 10. Weather Widget API
-@app.route("/api/weather")
-@require_auth
-def get_weather():
-    weather_data = {
-        "temperature": 26,
-        "rain_chance": 10,
-        "wind_speed_kph": 12,
-        "advisory": "Weather is clear & warm. Grab a bottle of water and enjoy the match!",
-    }
-    seed = (int(time.time()) % 4) - 2
-    weather_data["temperature"] += seed
-    return jsonify({"status": "success", "weather": weather_data})
+app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(core_bp)
+app.register_blueprint(assistant_bp)
 
 
 # --- SERVER STARTUP ---

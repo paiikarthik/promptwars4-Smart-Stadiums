@@ -5,3 +5,4 @@ fpdf>=1.7.2
 gunicorn>=21.2.0
 werkzeug>=3.0.0
 flask-limiter>=2.9.0
+flask-wtf>=1.2.0
