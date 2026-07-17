@@ -72,6 +72,8 @@ if not SECRET_KEY:
     SECRET_KEY = DEFAULT_SESSION_SECRET
 
 app.secret_key = SECRET_KEY
+app.config["TESTING"] = IS_TESTING_ENV
+app.config["RATELIMIT_ENABLED"] = not IS_TESTING_ENV
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = not IS_TESTING_ENV and not app.debug
@@ -112,7 +114,7 @@ def sanitize_html(text):
 
 
 def is_testing_environment() -> bool:
-    return IS_TESTING_ENV
+    return bool(app.config.get("TESTING", False))
 
 
 def is_safe_origin_or_referer() -> bool:

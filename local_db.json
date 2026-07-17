@@ -29,6 +29,12 @@
             "password_hash": "scrypt:32768:8:1$gUjQ0Ztaq2RDQiNj$9e7a95b5082201e2d166c7b49f0e8c332fafa5b43dd037be23edfc7b1bcf6f95cd193c5659c9a0a3537a0b69bccf4a4fac39628dde6d10e8d0b4179d624c8c24",
             "role": "admin",
             "created_at": 1784223852.000242
+        },
+        "test_fan": {
+            "username": "test_fan",
+            "password_hash": "scrypt:32768:8:1$UoZDiQPOBJGUH0FG$de8491ffedeb4051a45fe7e17d1f1fc556e081e9591015481dd8606ce51004cac7103c4a0a09c30bb3b64295ae13a49466303133e4c1adda5891ede4acba16aa",
+            "role": "attendee",
+            "created_at": 1784277868.0935938
         }
     },
     "simulation_state": {

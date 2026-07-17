@@ -104,7 +104,7 @@ class FeedbackService:
           * Restrooms: {avg_scores['restrooms']}
           * Security: {avg_scores['security']}
           * AI Assistant: {avg_scores['ai_assistant']}
-        
+
         Recent Comments:
         {comments_summary}
 

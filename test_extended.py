@@ -1,16 +1,18 @@
-import unittest
+import importlib
 import json
 import os
 import sys
+import unittest
 
-# Ensure imports work
+# Ensure imports work and use test database environment config
+os.environ["TESTING"] = "true"
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Use test database environment config
-os.environ["TESTING"] = "true"
+app_module = importlib.import_module("extended_app")
+app = app_module.app
 
-from extended_app import app  # noqa: E402
-from app import db
+db_module = importlib.import_module("app")
+db = db_module.db
 
 
 class ExtendedAppTestCase(unittest.TestCase):

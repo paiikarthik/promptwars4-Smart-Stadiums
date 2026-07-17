@@ -77,7 +77,7 @@ class ReportService:
         )
 
         prompt = f"""
-        You are ArenaFlow's Incident & Command Chief Operations Officer 🤖. 
+        You are ArenaFlow's Incident & Command Chief Operations Officer 🤖.
         Compile an Operations Incident Report based on current telemetry:
         - Current Crowd: {total_occupancy} / {state.get('capacity', 70000)}
         - Entrances: {gates_str}
@@ -201,9 +201,9 @@ class ReportService:
         }
 
         prompt = f"""
-        You are ArenaFlow's Operations Command Copilot 🤖. 
+        You are ArenaFlow's Operations Command Copilot 🤖.
         Your task is to answer operational queries for administrators based on the current metrics and logs:
-        
+
         {json.dumps(summary_data, indent=2)}
 
         User Question: {question}
@@ -212,7 +212,7 @@ class ReportService:
         - "What caused congestion?" -> Highlight the zones with crowd levels >75% and review recent dispatches/alerts.
         - "Which gate has the highest wait?" -> Inspect gates lists.
         - "Generate staffing recommendations" -> Propose deploying security/medical staff based on the highest zone density.
-        
+
         Keep your response brief (1-2 paragraphs), analytical, and objective. Use Markdown tags.
         """
 

@@ -1,27 +1,21 @@
 import logging
+import os
 
 from app import app
+from extended_blueprints.chatbot_bp import chatbot_bp
+from extended_blueprints.map_bp import map_bp
+from extended_blueprints.navigation_bp import navigation_bp
+from extended_blueprints.parking_bp import parking_bp
+from extended_blueprints.schedule_bp import schedule_bp
+from extended_blueprints.seat_map_bp import seat_map_bp
+from extended_blueprints.weather_bp import weather_bp
 
 # Configure logger
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-
-# Configure logger
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-)
 logger = logging.getLogger("ExtendedApp")
-
-# Import blueprints (to be created next)
-from extended_blueprints.chatbot_bp import chatbot_bp
-from extended_blueprints.seat_map_bp import seat_map_bp
-from extended_blueprints.schedule_bp import schedule_bp
-from extended_blueprints.map_bp import map_bp
-from extended_blueprints.navigation_bp import navigation_bp
-from extended_blueprints.weather_bp import weather_bp
-from extended_blueprints.parking_bp import parking_bp
 
 # Register blueprints under the /extended url prefix
 app.register_blueprint(chatbot_bp, url_prefix="/extended")
