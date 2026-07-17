@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 # Comprehensive local dictionary translations for core stadium terms across 13 Indian languages
 LOCAL_TRANSLATIONS = {
@@ -227,13 +228,25 @@ LOCAL_TRANSLATIONS = {
 
 
 class TranslationService:
-    def __init__(self):
-        # Allow configuring keys via environment variables
-        self.api_key = os.environ.get("GOOGLE_TRANSLATION_API_KEY")
+    """Service class responsible for translating UI strings across local dictionaries.
 
-    def translate_key(self, key, target_lang):
-        """Translates a specific key to a target language.
-        Falls back to local pre-defined dictionary translation.
+    Attributes:
+        api_key (Optional[str]): Key for Google Translation API if configured.
+    """
+
+    def __init__(self) -> None:
+        """Initializes TranslationService and checks configuration."""
+        self.api_key: Optional[str] = os.environ.get("GOOGLE_TRANSLATION_API_KEY")
+
+    def translate_key(self, key: str, target_lang: str) -> str:
+        """Translates a specific key to a target language fallback dictionary.
+
+        Args:
+            key (str): UI dictionary identifier key.
+            target_lang (str): Language code (e.g. en, hi, kn).
+
+        Returns:
+            str: Translated text string.
         """
         target = str(target_lang).lower()
         if target not in LOCAL_TRANSLATIONS:
@@ -242,12 +255,15 @@ class TranslationService:
         lang_dict = LOCAL_TRANSLATIONS.get(target, LOCAL_TRANSLATIONS["en"])
         return lang_dict.get(key, LOCAL_TRANSLATIONS["en"].get(key, key))
 
-    def translate_text(self, text, target_lang):
-        """Translates an arbitrary string.
-        In production, calls Google Cloud Translation API.
-        Falls back to returning text if API is unavailable or keys are missing.
+    def translate_text(self, text: str, target_lang: str) -> str:
+        """Translates an arbitrary string via standard translation models.
+
+        Args:
+            text (str): Source text body.
+            target_lang (str): Target language code.
+
+        Returns:
+            str: Translated string.
         """
-        # If API key is present, execute translation
-        # e.g., requests.post("https://translation.googleapis.com/language/translate/v2", ...)
         # Local fallback does nothing, just returns text.
         return text

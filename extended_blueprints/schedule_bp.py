@@ -6,5 +6,10 @@ schedule_bp = Blueprint("schedule_bp", __name__)
 
 @schedule_bp.route("/schedule")
 @require_auth
-def schedule_page():
+def schedule_page() -> str:
+    """Renders the match fixture schedule list page.
+
+    Returns:
+        str: Rendered HTML template.
+    """
     return render_template("schedule.html", username=session.get("username"))

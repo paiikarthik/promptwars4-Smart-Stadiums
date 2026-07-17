@@ -1,6 +1,10 @@
 import os
 import time
 import json
+import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger("ReportService")
 
 # Try to import fpdf for PDF exports
 try:
@@ -13,6 +17,7 @@ except ImportError:
 # Try to import Google GenAI SDK
 try:
     from google import genai
+    import google.api_core.exceptions
 
     HAS_GENAI = True
 except ImportError:
@@ -20,38 +25,63 @@ except ImportError:
 
 
 class ReportService:
-    def __init__(self, db):
-        self.db = db
-        self.gemini_client = None
+    """Service class responsible for generating incident reports and Operations Copilot chat answers.
+
+    Attributes:
+        db (Any): Stadium database interface helper.
+        gemini_client (Optional[genai.Client]): GenAI client session if configured.
+    """
+
+    def __init__(self, db: Any) -> None:
+        """Initializes ReportService with database and Gemini configurations.
+
+        Args:
+            db (Any): Stadium database client.
+        """
+        self.db: Any = db
+        self.gemini_client: Optional[genai.Client] = None
         if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
             try:
                 self.gemini_client = genai.Client(
                     api_key=os.environ.get("GEMINI_API_KEY")
                 )
-            except Exception:
-                pass
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[ReportService] Gemini initialization error: {e}")
 
-    def generate_incident_report_text(self):
-        """Compiles incident metrics and requests Gemini to create an AI summary."""
-        state = self.db.get_simulation_state()
-        alerts = self.db.get_alerts()
-        dispatches = self.db.get_dispatches()
+    def _format_telemetry_summary(self, state: Dict[str, Any]) -> Tuple[int, str, str]:
+        """Formats current crowd, gate wait times, and zone density summaries.
 
-        # Format context data
-        total_occupancy = state.get("occupancy", 0)
-        gates_str = ", ".join(
+        Args:
+            state (Dict[str, Any]): Current telemetry state mapping.
+
+        Returns:
+            Tuple[int, str, str]: Total occupancy, gate statuses, and zone densities.
+        """
+        total_occupancy: int = state.get("occupancy", 0)
+        gates_str: str = ", ".join(
             [
                 f"{g['name']}: {g['waitTimeMinutes']}m wait"
                 for g in state.get("gates", [])
             ]
         )
-        zones_str = ", ".join(
+        zones_str: str = ", ".join(
             [
                 f"{z['name']}: {z['crowdLevel']}% full"
                 for z in state.get("zones", [])
             ]
         )
+        return total_occupancy, gates_str, zones_str
 
+    def _format_recent_logs(self, dispatches: List[Dict[str, Any]], alerts: List[Dict[str, Any]]) -> Tuple[str, str]:
+        """Formats lists of recent dispatches and alerts for reports.
+
+        Args:
+            dispatches (List[Dict[str, Any]]): Recorded dispatches log.
+            alerts (List[Dict[str, Any]]): Broadcasted alerts list.
+
+        Returns:
+            Tuple[str, str]: Markdown formatted strings of logs.
+        """
         recent_dispatches = dispatches[:5]
         dispatch_str = (
             "\n".join(
@@ -75,6 +105,20 @@ class ReportService:
             if recent_alerts
             else "- No alerts broadcasted"
         )
+        return dispatch_str, alerts_str
+
+    def generate_incident_report_text(self) -> str:
+        """Compiles incident metrics and requests Gemini to create an AI summary.
+
+        Returns:
+            str: Markdown format operations incident report.
+        """
+        state: Dict[str, Any] = self.db.get_simulation_state()
+        alerts: List[Dict[str, Any]] = self.db.get_alerts()
+        dispatches: List[Dict[str, Any]] = self.db.get_dispatches()
+
+        total_occupancy, gates_str, zones_str = self._format_telemetry_summary(state)
+        dispatch_str, alerts_str = self._format_recent_logs(dispatches, alerts)
 
         prompt = f"""
         You are ArenaFlow's Incident & Command Chief Operations Officer 🤖.
@@ -100,9 +144,10 @@ class ReportService:
                 response = self.gemini_client.models.generate_content(
                     model="gemini-1.5-flash", contents=prompt
                 )
-                return response.text
-            except Exception as e:
-                print(f"[ReportService] Gemini report error: {e}")
+                res_text: str = response.text
+                return res_text
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[ReportService] Gemini report generation error: {e}")
 
         # Local rule-based fallback generator
         congested = [
@@ -127,18 +172,14 @@ class ReportService:
         )
         return fallback_report
 
-    def export_report_to_pdf(self, report_text, title="Incident_Report"):
-        """Compiles FPDF document and returns raw bytes of PDF."""
-        if not HAS_FPDF:
-            return None
+    def _pdf_add_header(self, pdf: Any, title: str) -> None:
+        """Adds operational brand header banner to FPDF document.
 
-        # Standard FPDF generator
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-
-        # Header / Brand
-        pdf.set_fill_color(18, 22, 41)  # Dark space blue header
+        Args:
+            pdf (FPDF): FPDF instance.
+            title (str): Title of the report.
+        """
+        pdf.set_fill_color(18, 22, 41)
         pdf.rect(0, 0, 210, 40, "F")
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Arial", "B", size=18)
@@ -153,14 +194,32 @@ class ReportService:
         )
         pdf.ln(15)
 
-        # Body
+        # Body settings
         pdf.set_text_color(0, 0, 0)
         pdf.set_font("Arial", "B", size=14)
         pdf.cell(0, 10, title.replace("_", " "), ln=1)
         pdf.set_font("Arial", size=11)
         pdf.ln(5)
 
-        # Remove markdown stars and format lines
+    def export_report_to_pdf(self, report_text: str, title: str = "Incident_Report") -> Optional[bytes]:
+        """Compiles FPDF document and returns raw bytes of PDF.
+
+        Args:
+            report_text (str): Report text.
+            title (str): Output PDF file name/header.
+
+        Returns:
+            Optional[bytes]: raw bytes of compiled PDF document, or None if FPDF is missing.
+        """
+        if not HAS_FPDF:
+            return None
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        self._pdf_add_header(pdf, title)
+
         lines = report_text.split("\n")
         for line in lines:
             cleaned = line.replace("**", "").replace("*", "").strip()
@@ -168,20 +227,66 @@ class ReportService:
                 pdf.ln(4)
                 continue
 
-            # Print
             try:
                 pdf.multi_cell(
                     0, 6, cleaned.encode("latin1", "ignore").decode("latin1")
                 )
-            except Exception:
+            except (UnicodeEncodeError, UnicodeDecodeError):
                 pdf.multi_cell(0, 6, cleaned)
 
-        # Return PDF bytes
-        return pdf.output(dest="S")
+        val_bytes: bytes = pdf.output(dest="S")
+        return val_bytes
 
-    def run_operations_copilot(self, question):
-        """AI Operations Copilot: Answers questions about operations using telemetry, logs, and dispatches."""
-        state = self.db.get_simulation_state()
+    def _get_local_copilot_response(self, question: str, state: Dict[str, Any]) -> str:
+        """Processes simple queries through rule-based matching.
+
+        Args:
+            question (str): User command.
+            state (Dict[str, Any]): Telemetry snapshot.
+
+        Returns:
+            str: Preformatted assistant answer.
+        """
+        q = question.lower()
+        if "cause" in q or "congestion" in q or "busy" in q:
+            congested = [
+                z["name"]
+                for z in state.get("zones", [])
+                if z["crowdLevel"] > 75
+            ]
+            if congested:
+                return f"📋 **Copilot**: The current congestion is primarily located in **{', '.join(congested)}** due to high flow rates. Staff dispatches may be required to manage queues."
+            return "📋 **Copilot**: Concourse levels are currently normal; no significant bottlenecks are detected."
+
+        if "gate" in q or "wait" in q:
+            gates = state.get("gates", [])
+            if gates:
+                slowest = max(gates, key=lambda x: x["waitTimeMinutes"])
+                return f"📋 **Copilot**: **{slowest['name']}** currently has the highest wait time at **{slowest['waitTimeMinutes']} minutes**."
+            return "📋 **Copilot**: Gate wait metrics are currently unavailable."
+
+        if "staff" in q or "recommend" in q:
+            zones = state.get("zones", [])
+            if zones:
+                busiest = max(zones, key=lambda x: x["crowdLevel"])
+                return (
+                    f"📋 **Copilot Staffing Alert**:\n"
+                    f"- Recommend deploying **Security** to **{busiest['name']}** (Current density: {busiest['crowdLevel']}%).\n"
+                    f"- Maintain medical standbys near gate entrances to assist inbound flows."
+                )
+
+        return "📋 **Copilot**: I can analyze stadium metrics and alerts. Ask me about congestion causes, gate wait peaks, or staffing recommendations."
+
+    def run_operations_copilot(self, question: str) -> str:
+        """AI Operations Copilot: Answers questions about operations using telemetry.
+
+        Args:
+            question (str): User command message.
+
+        Returns:
+            str: Markdown format answer.
+        """
+        state: Dict[str, Any] = self.db.get_simulation_state()
         alerts = self.db.get_alerts()
         dispatches = self.db.get_dispatches()
 
@@ -221,39 +326,9 @@ class ReportService:
                 response = self.gemini_client.models.generate_content(
                     model="gemini-1.5-flash", contents=prompt
                 )
-                return response.text
-            except Exception as e:
-                print(f"[ReportService] Copilot Gemini error: {e}")
+                res_text: str = response.text
+                return res_text
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[ReportService] Copilot Gemini error: {e}")
 
-        # Local fallback answers
-        q = question.lower()
-        if "cause" in q or "congestion" in q or "busy" in q:
-            congested = [
-                z["name"]
-                for z in state.get("zones", [])
-                if z["crowdLevel"] > 75
-            ]
-            if congested:
-                return f"🤖 **Copilot**: The current congestion is primarily located in **{', '.join(congested)}** due to high flow rates. Staff dispatches may be required to manage queues."
-            return "🤖 **Copilot**: Concourse levels are currently normal; no significant bottlenecks are detected."
-
-        if "gate" in q or "wait" in q:
-            gates = state.get("gates", [])
-            if gates:
-                slowest = max(gates, key=lambda x: x["waitTimeMinutes"])
-                return f"🤖 **Copilot**: **{slowest['name']}** currently has the highest wait time at **{slowest['waitTimeMinutes']} minutes**."
-            return (
-                "🤖 **Copilot**: Gate wait metrics are currently unavailable."
-            )
-
-        if "staff" in q or "recommend" in q:
-            zones = state.get("zones", [])
-            if zones:
-                busiest = max(zones, key=lambda x: x["crowdLevel"])
-                return (
-                    f"🤖 **Copilot Staffing Alert**:\n"
-                    f"- Recommend deploying **Security** to **{busiest['name']}** (Current density: {busiest['crowdLevel']}%).\n"
-                    f"- Maintain medical standbys near gate entrances to assist inbound flows."
-                )
-
-        return "🤖 **Copilot**: I can analyze stadium metrics and alerts. Ask me about congestion causes, gate wait peaks, or staffing recommendations."
+        return self._get_local_copilot_response(question, state)

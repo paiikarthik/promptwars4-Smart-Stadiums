@@ -1,9 +1,14 @@
 import time
 import os
+import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger("FeedbackService")
 
 # Import Google GenAI SDK
 try:
     from google import genai
+    import google.api_core.exceptions
 
     HAS_GENAI = True
 except ImportError:
@@ -11,19 +16,39 @@ except ImportError:
 
 
 class FeedbackService:
-    def __init__(self, db):
-        self.db = db
-        self.gemini_client = None
+    """Service class responsible for managing and summarizing fan feedback.
+
+    Attributes:
+        db (Any): The stadium database helper object.
+        gemini_client (Optional[genai.Client]): Gemini AI client session if configured.
+    """
+
+    def __init__(self, db: Any) -> None:
+        """Initializes FeedbackService with database and Gemini configurations.
+
+        Args:
+            db (Any): Stadium database interface.
+        """
+        self.db: Any = db
+        self.gemini_client: Optional[genai.Client] = None
         if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
             try:
                 self.gemini_client = genai.Client(
                     api_key=os.environ.get("GEMINI_API_KEY")
                 )
-            except Exception:
-                pass
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[FeedbackService] Gemini client initialization error: {e}")
 
-    def submit_feedback(self, scores, comments):
-        """Saves a feedback submission containing ratings and comment."""
+    def submit_feedback(self, scores: Dict[str, Any], comments: str) -> Dict[str, Any]:
+        """Saves a feedback submission containing ratings and comments.
+
+        Args:
+            scores (Dict[str, Any]): Categories rating scores dictionary.
+            comments (str): Text comments.
+
+        Returns:
+            Dict[str, Any]: Saved feedback structure.
+        """
         feedback = {
             "id": f"feedback-{time.time()}",
             "scores": {
@@ -42,8 +67,8 @@ class FeedbackService:
                 self.db.db.collection("feedbacks").document(
                     feedback["id"]
                 ).set(feedback)
-            except Exception as e:
-                print(f"[FeedbackService] Firebase write error: {e}")
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[FeedbackService] Firebase write error: {e}")
         else:
             with self.db.lock:
                 data = self.db._read_local_db()
@@ -53,27 +78,33 @@ class FeedbackService:
                 self.db._write_local_db(data)
         return feedback
 
-    def get_feedbacks(self):
-        """Retrieves all submitted feedbacks."""
+    def get_feedbacks(self) -> List[Dict[str, Any]]:
+        """Retrieves all submitted feedbacks from database.
+
+        Returns:
+            List[Dict[str, Any]]: Feedback objects list.
+        """
         if self.db.use_firebase:
             try:
                 docs = self.db.db.collection("feedbacks").stream()
                 return [doc.to_dict() for doc in docs]
-            except Exception as e:
-                print(f"[FeedbackService] Firebase read error: {e}")
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[FeedbackService] Firebase read error: {e}")
                 return []
         else:
             with self.db.lock:
                 data = self.db._read_local_db()
                 return data.get("feedbacks", [])
 
-    def generate_feedback_summary(self):
-        """Uses Gemini to summarize the fan experience and feedback."""
-        feedbacks = self.get_feedbacks()
-        if not feedbacks:
-            return "No feedback has been submitted by fans yet. Check back once attendees register ratings."
+    def _calculate_average_scores(self, feedbacks: List[Dict[str, Any]]) -> Tuple[int, Dict[str, float], List[str]]:
+        """Averages scores and extracts comments from feedbacks.
 
-        # Aggregate averages
+        Args:
+            feedbacks (List[Dict[str, Any]]): Submitted feedbacks array.
+
+        Returns:
+            Tuple[int, Dict[str, float], List[str]]: Count, average scores mapping, and comments log.
+        """
         count = len(feedbacks)
         avg_scores = {
             "navigation": 0.0,
@@ -93,6 +124,19 @@ class FeedbackService:
         for key in avg_scores:
             avg_scores[key] = round(avg_scores[key] / count, 1)
 
+        return count, avg_scores, comments
+
+    def generate_feedback_summary(self) -> str:
+        """Uses Gemini to summarize the fan experience and feedback rating metrics.
+
+        Returns:
+            str: Markdown format report.
+        """
+        feedbacks = self.get_feedbacks()
+        if not feedbacks:
+            return "No feedback has been submitted by fans yet. Check back once attendees register ratings."
+
+        count, avg_scores, comments = self._calculate_average_scores(feedbacks)
         comments_summary = "\n".join([f"- {c}" for c in comments[:10]])
 
         prompt = f"""
@@ -120,9 +164,10 @@ class FeedbackService:
                 response = self.gemini_client.models.generate_content(
                     model="gemini-1.5-flash", contents=prompt
                 )
-                return response.text
-            except Exception as e:
-                print(f"[FeedbackService] Gemini error: {e}")
+                res_text: str = response.text
+                return res_text
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[FeedbackService] Gemini content generation error: {e}")
 
         # Local rule-based summary fallback
         lowest_cat = min(avg_scores, key=avg_scores.get)

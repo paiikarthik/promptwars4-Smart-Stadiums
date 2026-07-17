@@ -1,6 +1,7 @@
 import json
 import queue
 import time
+import google.api_core.exceptions
 from typing import Union, Tuple, Dict, Any
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
 
@@ -175,6 +176,26 @@ def lost_found_page() -> str:
     return render_template("lost_found.html", username=session.get("username"))
 
 
+def _save_lost_found_item(item: Dict[str, Any]) -> None:
+    """Helper to save a lost and found item to Firebase or local DB.
+
+    Args:
+        item (Dict[str, Any]): The item dictionary to save.
+    """
+    if db.use_firebase:
+        try:
+            db.db.collection("lost_found").document(item["id"]).set(item)
+        except google.api_core.exceptions.GoogleAPIError as e:
+            logger.error(f"[LostFound] Firebase error: {e}")
+    else:
+        with db.lock:
+            local_data = db._read_local_db()
+            if "lost_found" not in local_data:
+                local_data["lost_found"] = []
+            local_data["lost_found"].append(item)
+            db._write_local_db(local_data)
+
+
 @core_bp.route("/api/lost-found/submit", methods=["POST"])
 @require_auth
 def submit_lost_found() -> Union[Response, Tuple[Response, int]]:
@@ -215,19 +236,7 @@ def submit_lost_found() -> Union[Response, Tuple[Response, int]]:
         "timestamp": time.time(),
     }
 
-    if db.use_firebase:
-        try:
-            db.db.collection("lost_found").document(item["id"]).set(item)
-        except Exception as e:
-            logger.error(f"[LostFound] Firebase error: {e}")
-    else:
-        with db.lock:
-            local_data = db._read_local_db()
-            if "lost_found" not in local_data:
-                local_data["lost_found"] = []
-            local_data["lost_found"].append(item)
-            db._write_local_db(local_data)
-
+    _save_lost_found_item(item)
     return jsonify({"status": "success", "item": item})
 
 
@@ -248,7 +257,7 @@ def search_lost_found() -> Union[Response, Tuple[Response, int]]:
         try:
             docs = db.db.collection("lost_found").stream()
             items = [doc.to_dict() for doc in docs]
-        except Exception as e:
+        except google.api_core.exceptions.GoogleAPIError as e:
             logger.error(f"[LostFound] Firebase read error: {e}")
     else:
         with db.lock:

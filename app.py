@@ -8,6 +8,8 @@ import threading
 import time
 from functools import wraps
 from urllib.parse import urlparse
+from typing import Any, Dict, List
+import google.api_core.exceptions as google_exceptions
 
 from flask import (
     Flask,
@@ -74,6 +76,7 @@ app.config["RATELIMIT_ENABLED"] = not IS_TESTING_ENV
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = not IS_TESTING_ENV and not app.debug
+app.config["PERMANENT_SESSION_LIFETIME"] = 1800
 
 # Initialize rate limiter (no default global limits)
 limiter = Limiter(key_func=get_remote_address, app=app, default_limits=[])
@@ -95,7 +98,7 @@ if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
     try:
         gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         logger.info("[AI] Google GenAI client initialized successfully.")
-    except Exception as e:
+    except (ValueError, google_exceptions.GoogleAPIError) as e:
         logger.error(f"[AI] GenAI initialization failed: {e}")
 
 
@@ -218,7 +221,7 @@ def inject_csrf_token(response):
             if "<head>" in html:
                 html = html.replace("<head>", f"<head>{meta_tag}", 1)
                 response.set_data(html)
-        except Exception as e:
+        except (ValueError, UnicodeDecodeError) as e:
             logger.error(f"Failed to inject CSRF token: {e}")
     return response
 
@@ -240,6 +243,7 @@ def add_security_headers(response):
         "connect-src 'self' https://maps.googleapis.com; "
         "frame-src 'none';"
     )
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if not app.config.get("TESTING") and not app.debug:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
@@ -283,79 +287,90 @@ def internal_server_error(e):
 
 # --- STATE DRIFT SIMULATION ENGINE ---
 
-def drift_simulation():
+def _drift_telemetry_occupancy(state: Dict[str, Any]) -> None:
+    """Helper to drift occupancy stats.
+
+    Args:
+        state (Dict[str, Any]): Telemetry state mapping.
+    """
+    capacity = state.get("capacity", 70000)
+    occupancy = state.get("occupancy", 52000)
+    state["occupancy"] = max(
+        5000, min(capacity, occupancy + random.randint(-400, +600))
+    )
+
+
+def _drift_telemetry_metrics(state: Dict[str, Any]) -> None:
+    """Helper to drift gates, zones, and amenities wait times.
+
+    Args:
+        state (Dict[str, Any]): Telemetry state mapping.
+    """
+    for gate in state.get("gates", []):
+        gate["waitTimeMinutes"] = max(
+            1, min(45, gate["waitTimeMinutes"] + random.randint(-2, 2))
+        )
+    for zone in state.get("zones", []):
+        zone["crowdLevel"] = max(
+            5, min(99, zone["crowdLevel"] + random.randint(-3, 3))
+        )
+    for am in state.get("amenities", []):
+        am["waitTimeMinutes"] = max(
+            0, min(30, am["waitTimeMinutes"] + random.randint(-2, 2))
+        )
+
+
+def _check_and_trigger_auto_alerts(state: Dict[str, Any], alerts: List[Dict[str, Any]]) -> None:
+    """Helper to clean and trigger automated simulation alerts.
+
+    Args:
+        state (Dict[str, Any]): Telemetry state mapping.
+        alerts (List[Dict[str, Any]]): List of alerts.
+    """
+    if random.random() < 0.2:
+        db.clear_auto_alerts()
+        # Clear inline by modifying slice
+        alerts.clear()
+        alerts.extend([a for a in db.get_alerts() if not a.get("auto")])
+
+    food_zone = next(
+        (z for z in state.get("zones", []) if z["id"] == "zone-food"),
+        None,
+    )
+    if food_zone and food_zone["crowdLevel"] > 90:
+        if not any("Food Court" in a["message"] for a in alerts):
+            db.add_alert(
+                "Critical overcrowding in Food Court. Medical staff on standby.",
+                "danger",
+                auto=True,
+            )
+
+
+def drift_simulation() -> None:
     """Background thread function that drifts the state every 5 seconds."""
     global current_state
 
     logger.info("[Simulation] Background thread started.")
     while True:
-        # Update simulation telemetry every 5 seconds
         time.sleep(5)
 
         with current_state_lock:
-            state = db.get_simulation_state()
+            state: Dict[str, Any] = db.get_simulation_state()
             if not state:
-                # Local DB initialization fallback
                 continue
 
-            # 1. Drift Occupancy (-400 to +600) capped at capacity
-            capacity = state.get("capacity", 70000)
-            occupancy = state.get("occupancy", 52000)
-            state["occupancy"] = max(
-                5000, min(capacity, occupancy + random.randint(-400, +600))
-            )
+            _drift_telemetry_occupancy(state)
+            _drift_telemetry_metrics(state)
+            alerts: List[Dict[str, Any]] = db.get_alerts()
+            _check_and_trigger_auto_alerts(state, alerts)
 
-            # 2. Drift Gate wait times (-2 to +2 minutes)
-            for gate in state.get("gates", []):
-                drift = random.randint(-2, 2)
-                gate["waitTimeMinutes"] = max(
-                    1, min(45, gate["waitTimeMinutes"] + drift)
-                )
-
-            # 3. Drift Zone crowd levels (-3% to +3%)
-            for zone in state.get("zones", []):
-                drift = random.randint(-3, 3)
-                zone["crowdLevel"] = max(
-                    5, min(99, zone["crowdLevel"] + drift)
-                )
-
-            # 4. Drift Amenities wait times (-2 to +2 minutes)
-            for am in state.get("amenities", []):
-                drift = random.randint(-2, 2)
-                am["waitTimeMinutes"] = max(
-                    0, min(30, am["waitTimeMinutes"] + drift)
-                )
-
-            # 5. Automated Alerts Cleanup (20% chance each drift)
-            alerts = db.get_alerts()
-            if random.random() < 0.2:
-                # Remove automated warnings
-                db.clear_auto_alerts()
-                alerts = [a for a in alerts if not a.get("auto")]
-
-            # 6. Automatic Medical/Security Overcrowd Alert (if Food Court >90%)
-            food_zone = next(
-                (z for z in state.get("zones", []) if z["id"] == "zone-food"),
-                None,
-            )
-            if food_zone and food_zone["crowdLevel"] > 90:
-                if not any("Food Court" in a["message"] for a in alerts):
-                    db.add_alert(
-                        "Critical overcrowding in Food Court. Medical staff on standby.",
-                        "danger",
-                        auto=True,
-                    )
-
-            # Save the drifted state to the database
             db.save_simulation_state(state)
             current_state = state
 
         # Notify all active SSE stream connections
         with sse_lock:
-            # Refresh alerts from DB to send along with the state
             fresh_alerts = db.get_alerts()
             payload = {"telemetry": current_state, "alerts": fresh_alerts}
-            # Remove closed/broken queues
             for listener in list(sse_listeners):
                 try:
                     listener.put_nowait(payload)

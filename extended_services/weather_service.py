@@ -1,20 +1,25 @@
 import os
 import time
+from typing import Any, Dict, Optional
 
 
 class WeatherService:
-    def __init__(self):
-        # Allow configuring keys via environment variables
-        self.api_key = os.environ.get("OPENWEATHER_API_KEY")
+    """Service class responsible for retrieving and simulating weather forecasts.
 
-    def get_weather_data(self):
-        """Fetches live weather from OpenWeather if key exists, otherwise
-        simulates highly realistic dynamic match-day weather with warnings.
+    Attributes:
+        api_key (Optional[str]): OpenWeather API key if configured.
+    """
+
+    def __init__(self) -> None:
+        """Initializes WeatherService and loads API configurations."""
+        self.api_key: Optional[str] = os.environ.get("OPENWEATHER_API_KEY")
+
+    def get_weather_data(self) -> Dict[str, Any]:
+        """Fetches live weather from OpenWeather if key exists, otherwise simulates dynamic conditions.
+
+        Returns:
+            Dict[str, Any]: Current weather metrics dictionary.
         """
-        # If API key exists, we could fetch from OpenWeatherMap API
-        # e.g., http://api.openweathermap.org/data/2.5/weather?q=Bangalore&appid=...
-        # For reliability and security, we have a complete fallback simulation:
-
         # Base realistic values
         base_temp = 28
         base_humidity = 65

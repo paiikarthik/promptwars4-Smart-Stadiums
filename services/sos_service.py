@@ -1,12 +1,42 @@
 import time
+import logging
+from typing import Any, Dict, List
+from firebase_helper import StadiumDB
+
+logger = logging.getLogger("SOSService")
+
+# Try to import Google GenAI exceptions if available
+try:
+    import google.api_core.exceptions
+except ImportError:
+    pass
 
 
 class SOSService:
-    def __init__(self, db):
-        self.db = db
+    """Service class managing fan emergency SOS alerts.
 
-    def send_sos(self, seat, zone_id):
-        """Creates a new emergency SOS alert in the database."""
+    Attributes:
+        db (StadiumDB): Stadium database client.
+    """
+
+    def __init__(self, db: StadiumDB) -> None:
+        """Initializes SOSService with database dependency.
+
+        Args:
+            db (StadiumDB): Stadium database client helper.
+        """
+        self.db: StadiumDB = db
+
+    def send_sos(self, seat: str, zone_id: str) -> Dict[str, Any]:
+        """Creates a new emergency SOS alert in the database and triggers a global danger alert.
+
+        Args:
+            seat (str): Seat name identifier where the alert was triggered.
+            zone_id (str): Stadium zone identifier.
+
+        Returns:
+            Dict[str, Any]: Saved SOS alert structure.
+        """
         sos = {
             "id": f"sos-{time.time()}",
             "seat": str(seat).strip(),
@@ -17,11 +47,9 @@ class SOSService:
 
         if self.db.use_firebase:
             try:
-                self.db.db.collection("sos_alerts").document(sos["id"]).set(
-                    sos
-                )
-            except Exception as e:
-                print(f"[SOSService] Firebase write error: {e}")
+                self.db.db.collection("sos_alerts").document(sos["id"]).set(sos)
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[SOSService] Firebase write error: {e}")
         else:
             with self.db.lock:
                 data = self.db._read_local_db()
@@ -31,7 +59,6 @@ class SOSService:
                 self.db._write_local_db(data)
 
         # Also log an automatic danger alert in the global alerts center
-        # to alert other admins/attendees
         self.db.add_alert(
             f"Emergency SOS triggered: Seat {seat} in Zone {zone_id}.",
             "danger",
@@ -39,8 +66,12 @@ class SOSService:
         )
         return sos
 
-    def get_sos_alerts(self):
-        """Fetches all active emergency alerts."""
+    def get_sos_alerts(self) -> List[Dict[str, Any]]:
+        """Fetches all active emergency alerts sorted chronologically (newest first).
+
+        Returns:
+            List[Dict[str, Any]]: Array of SOS alerts.
+        """
         if self.db.use_firebase:
             try:
                 docs = self.db.db.collection("sos_alerts").stream()
@@ -48,19 +79,27 @@ class SOSService:
                 return sorted(
                     alerts, key=lambda x: x["timestamp"], reverse=True
                 )
-            except Exception as e:
-                print(f"[SOSService] Firebase read error: {e}")
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[SOSService] Firebase read error: {e}")
                 return []
         else:
             with self.db.lock:
                 data = self.db._read_local_db()
-                alerts = data.get("sos_alerts", [])
+                alerts_local: List[Dict[str, Any]] = data.get("sos_alerts", [])
                 return sorted(
-                    alerts, key=lambda x: x["timestamp"], reverse=True
+                    alerts_local, key=lambda x: x["timestamp"], reverse=True
                 )
 
-    def update_sos_status(self, sos_id, status):
-        """Updates status of an emergency alert."""
+    def update_sos_status(self, sos_id: str, status: str) -> bool:
+        """Updates status (Pending, Accepted, Resolved) of an active emergency alert.
+
+        Args:
+            sos_id (str): Targeted SOS alert identifier.
+            status (str): New status string.
+
+        Returns:
+            bool: True if status updated successfully, False otherwise.
+        """
         if status not in ["Pending", "Accepted", "Resolved"]:
             return False
 
@@ -70,13 +109,13 @@ class SOSService:
                 if ref.get().exists:
                     ref.update({"status": status})
                     return True
-            except Exception as e:
-                print(f"[SOSService] Firebase update error: {e}")
+            except google.api_core.exceptions.GoogleAPIError as e:
+                logger.error(f"[SOSService] Firebase update error: {e}")
                 return False
         else:
             with self.db.lock:
                 data = self.db._read_local_db()
-                sos_list = data.get("sos_alerts", [])
+                sos_list: List[Dict[str, Any]] = data.get("sos_alerts", [])
                 found = False
                 for s in sos_list:
                     if s["id"] == sos_id:
