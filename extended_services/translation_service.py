@@ -17,9 +17,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "Weather Conditions",
         "lbl_predictions": "Crowd Predictions",
         "lbl_voice_btn": "Hold to Speak",
-        "lbl_assistant_title": "AI Stadium Super Assistant"
+        "lbl_assistant_title": "AI Stadium Super Assistant",
     },
-    "hi": { # Hindi
+    "hi": {  # Hindi
         "title": "एरिनाफ्लो उन्नत पैनल",
         "lbl_match": "आज का मैच",
         "lbl_capacity": "स्टेडियम की क्षमता",
@@ -34,9 +34,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "मौसम की स्थिति",
         "lbl_predictions": "भीड़ का पूर्वानुमान",
         "lbl_voice_btn": "बोलने के लिए दबाएं",
-        "lbl_assistant_title": "एआई स्टेडियम सुपर सहायक"
+        "lbl_assistant_title": "एआई स्टेडियम सुपर सहायक",
     },
-    "kn": { # Kannada
+    "kn": {  # Kannada
         "title": "ಅರೆನಾಫ್ಲೋ ಸುಧಾರಿತ ಫಲಕ",
         "lbl_match": "ಇಂದಿನ ಪಂದ್ಯ",
         "lbl_capacity": "ಕ್ರೀಡಾಂಗಣದ ಸಾಮರ್ಥ್ಯ",
@@ -51,9 +51,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "ಹವಾಮಾನ ಸ್ಥಿತಿ",
         "lbl_predictions": "ಜನಸಂದಣಿ ಮುನ್ಸೂಚನೆಗಳು",
         "lbl_voice_btn": "ಮಾತನಾಡಲು ಒತ್ತಿಹಿಡಿಯಿರಿ",
-        "lbl_assistant_title": "ಎಐ ಕ್ರೀಡಾಂಗಣ ಸೂಪರ್ ಸಹಾಯಕ"
+        "lbl_assistant_title": "ಎಐ ಕ್ರೀಡಾಂಗಣ ಸೂಪರ್ ಸಹಾಯಕ",
     },
-    "ta": { # Tamil
+    "ta": {  # Tamil
         "title": "அரினாஃப்ளோ மேம்பட்ட குழு",
         "lbl_match": "இன்றைய போட்டி",
         "lbl_capacity": "அரங்கத்தின் கொள்ளளவு",
@@ -68,9 +68,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "வானிலை நிலவரம்",
         "lbl_predictions": "கூட்ட கணிப்புகள்",
         "lbl_voice_btn": "பேச அழுத்திப் பிடிக்கவும்",
-        "lbl_assistant_title": "AI அரங்கம் சூப்பர் உதவியாளர்"
+        "lbl_assistant_title": "AI அரங்கம் சூப்பர் உதவியாளர்",
     },
-    "te": { # Telugu
+    "te": {  # Telugu
         "title": "అరేనాఫ్లో అడ్వాన్స్డ్ ప్యానెల్",
         "lbl_match": "నేటి మ్యాచ్",
         "lbl_capacity": "స్టేడియం సామర్థ్యం",
@@ -85,9 +85,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "వాతావరణ పరిస్థితులు",
         "lbl_predictions": "జనసమూహ అంచనాలు",
         "lbl_voice_btn": "మాట్లాడటానికి నొక్కండి",
-        "lbl_assistant_title": "AI స్టేడియం సూపర్ అసిస్టెంట్"
+        "lbl_assistant_title": "AI స్టేడియం సూపర్ అసిస్టెంట్",
     },
-    "ml": { # Malayalam
+    "ml": {  # Malayalam
         "title": "അരീനഫ്ലോ അഡ്വാൻസ്ഡ് പാനൽ",
         "lbl_match": "ഇന്നത്തെ മത്സരം",
         "lbl_capacity": "സ്റ്റേഡിയം ശേഷി",
@@ -102,9 +102,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "കാലാവസ്ഥാ വിവരങ്ങൾ",
         "lbl_predictions": "ജനക്കൂട്ട പ്രവചനങ്ങൾ",
         "lbl_voice_btn": "സംസാരിക്കാൻ അമർത്തുക",
-        "lbl_assistant_title": "AI സ്റ്റേഡിയം സൂപ്പർ അസിസ്റ്റന്റ്"
+        "lbl_assistant_title": "AI സ്റ്റേഡിയം സൂപ്പർ അസിസ്റ്റന്റ്",
     },
-    "mr": { # Marathi
+    "mr": {  # Marathi
         "title": "अ‍ॅरेनाफ्लो प्रगत पॅनेल",
         "lbl_match": "आजचा सामना",
         "lbl_capacity": "स्टेडियमची क्षमता",
@@ -119,9 +119,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "हवामानाची स्थिती",
         "lbl_predictions": "गर्दीचा अंदाज",
         "lbl_voice_btn": "बोलण्यासाठी दाबा",
-        "lbl_assistant_title": "एआय स्टेडियम सुपर असिस्टंट"
+        "lbl_assistant_title": "एआय स्टेडियम सुपर असिस्टंट",
     },
-    "gu": { # Gujarati
+    "gu": {  # Gujarati
         "title": "એરેનાફ્લો એડવાન્સ પેનલ",
         "lbl_match": "આજની મેચ",
         "lbl_capacity": "સ્ટેડિયમની ક્ષમતા",
@@ -136,9 +136,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "હવામાનની સ્થિતિ",
         "lbl_predictions": "ભીડનું પૂર્વાનુમાન",
         "lbl_voice_btn": "બોલવા માટે દબાવી રાખો",
-        "lbl_assistant_title": "એઆઈ સ્ટેડિયમ સુપર આસિસ્ટન્ટ"
+        "lbl_assistant_title": "એઆઈ સ્ટેડિયમ સુપર આસિસ્ટન્ટ",
     },
-    "pa": { # Punjabi
+    "pa": {  # Punjabi
         "title": "ਐਰੇਨਾਫਲੋ ਐਡਵਾਂਸਡ ਪੈਨਲ",
         "lbl_match": "ਅੱਜ ਦਾ ਮੈਚ",
         "lbl_capacity": "ਸਟੇਡੀਅਮ ਦੀ ਸਮਰੱਥਾ",
@@ -153,9 +153,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "ਮੌਸਮ ਦੀ ਸਥਿਤੀ",
         "lbl_predictions": "ਭੀੜ ਦਾ ਪੂਰਵਅਨੁਮਾਨ",
         "lbl_voice_btn": "ਬੋਲਣ ਲਈ ਦਬਾਓ",
-        "lbl_assistant_title": "ਏਆਈ ਸਟੇਡੀਅਮ ਸੁਪਰ ਸਹਾਇਕ"
+        "lbl_assistant_title": "ਏਆਈ ਸਟੇਡੀਅਮ ਸੁਪਰ ਸਹਾਇਕ",
     },
-    "bn": { # Bengali
+    "bn": {  # Bengali
         "title": "অ্যারেনাফ্লো অ্যাডভান্সড প্যানেল",
         "lbl_match": "আজকের ম্যাচ",
         "lbl_capacity": "স্টেডিয়ামের ক্ষমতা",
@@ -170,9 +170,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "আবহাওয়া পরিস্থিতি",
         "lbl_predictions": "ভিড়ের পূর্বাভাস",
         "lbl_voice_btn": "বলার জন্য টিপুন",
-        "lbl_assistant_title": "এআই স্টেডিয়াম সুপার অ্যাসিস্ট্যান্ট"
+        "lbl_assistant_title": "এআই স্টেডিয়াম সুপার অ্যাসিস্ট্যান্ট",
     },
-    "ur": { # Urdu
+    "ur": {  # Urdu
         "title": "ایرینا فلو ایڈوانسڈ پینل",
         "lbl_match": "آج کا میچ",
         "lbl_capacity": "اسٹیڈیم کی گنجائش",
@@ -187,9 +187,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "موسم کی صورتحال",
         "lbl_predictions": "ہجوم کی پیش گوئی",
         "lbl_voice_btn": "بولنے کے لیے دبائیں",
-        "lbl_assistant_title": "اے آئی اسٹیڈیم سپر اسسٹنٹ"
+        "lbl_assistant_title": "اے آئی اسٹیڈیم سپر اسسٹنٹ",
     },
-    "or": { # Odia
+    "or": {  # Odia
         "title": "ଆରେନାଫ୍ଲୋ ଆଡଭାନ୍ସ ପ୍ୟାନେଲ",
         "lbl_match": "ଆଜିର ମ୍ୟାଚ୍",
         "lbl_capacity": "ଷ୍ଟାଡିୟମ୍ କ୍ଷମତା",
@@ -204,9 +204,9 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "ପାଣିପାଗ ସୂଚନା",
         "lbl_predictions": "ଭିଡ଼ ପୂର୍ବାନୁମାନ",
         "lbl_voice_btn": "କହିବା ପାଇଁ ଦବାନ୍ତୁ",
-        "lbl_assistant_title": "AI ଷ୍ଟାଡିୟମ ସୁପର ସହାୟକ"
+        "lbl_assistant_title": "AI ଷ୍ଟାଡିୟମ ସୁପର ସହାୟକ",
     },
-    "kok": { # Konkani
+    "kok": {  # Konkani
         "title": "अरेनाफ्लो प्रगत पॅनेल",
         "lbl_match": "आजची मॅच",
         "lbl_capacity": "स्टेडियमची क्षमता",
@@ -221,9 +221,10 @@ LOCAL_TRANSLATIONS = {
         "lbl_weather": "हवामानाची स्थिती",
         "lbl_predictions": "गर्दीचो अंदाज",
         "lbl_voice_btn": "उलोवपाक दाबून दवरात",
-        "lbl_assistant_title": "एआय स्टेडियम सुपर सहाय्यक"
-    }
+        "lbl_assistant_title": "एआय स्टेडियम सुपर सहाय्यक",
+    },
 }
+
 
 class TranslationService:
     def __init__(self):
@@ -231,18 +232,18 @@ class TranslationService:
         self.api_key = os.environ.get("GOOGLE_TRANSLATION_API_KEY")
 
     def translate_key(self, key, target_lang):
-        """Translates a specific key to a target language. 
+        """Translates a specific key to a target language.
         Falls back to local pre-defined dictionary translation.
         """
         target = str(target_lang).lower()
         if target not in LOCAL_TRANSLATIONS:
             target = "en"
-            
+
         lang_dict = LOCAL_TRANSLATIONS.get(target, LOCAL_TRANSLATIONS["en"])
         return lang_dict.get(key, LOCAL_TRANSLATIONS["en"].get(key, key))
 
     def translate_text(self, text, target_lang):
-        """Translates an arbitrary string. 
+        """Translates an arbitrary string.
         In production, calls Google Cloud Translation API.
         Falls back to returning text if API is unavailable or keys are missing.
         """

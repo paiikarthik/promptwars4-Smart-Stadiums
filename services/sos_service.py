@@ -1,5 +1,6 @@
 import time
 
+
 class SOSService:
     def __init__(self, db):
         self.db = db
@@ -11,12 +12,14 @@ class SOSService:
             "seat": str(seat).strip(),
             "zone_id": zone_id,
             "timestamp": time.time(),
-            "status": "Pending" # Pending, Accepted, Resolved
+            "status": "Pending",  # Pending, Accepted, Resolved
         }
 
         if self.db.use_firebase:
             try:
-                self.db.db.collection("sos_alerts").document(sos["id"]).set(sos)
+                self.db.db.collection("sos_alerts").document(sos["id"]).set(
+                    sos
+                )
             except Exception as e:
                 print(f"[SOSService] Firebase write error: {e}")
         else:
@@ -26,13 +29,13 @@ class SOSService:
                     data["sos_alerts"] = []
                 data["sos_alerts"].append(sos)
                 self.db._write_local_db(data)
-                
+
         # Also log an automatic danger alert in the global alerts center
         # to alert other admins/attendees
         self.db.add_alert(
             f"Emergency SOS triggered: Seat {seat} in Zone {zone_id}.",
             "danger",
-            auto=True
+            auto=True,
         )
         return sos
 
@@ -42,7 +45,9 @@ class SOSService:
             try:
                 docs = self.db.db.collection("sos_alerts").stream()
                 alerts = [doc.to_dict() for doc in docs]
-                return sorted(alerts, key=lambda x: x["timestamp"], reverse=True)
+                return sorted(
+                    alerts, key=lambda x: x["timestamp"], reverse=True
+                )
             except Exception as e:
                 print(f"[SOSService] Firebase read error: {e}")
                 return []
@@ -50,7 +55,9 @@ class SOSService:
             with self.db.lock:
                 data = self.db._read_local_db()
                 alerts = data.get("sos_alerts", [])
-                return sorted(alerts, key=lambda x: x["timestamp"], reverse=True)
+                return sorted(
+                    alerts, key=lambda x: x["timestamp"], reverse=True
+                )
 
     def update_sos_status(self, sos_id, status):
         """Updates status of an emergency alert."""

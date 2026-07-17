@@ -5,6 +5,7 @@ import json
 # Try to import fpdf for PDF exports
 try:
     from fpdf import FPDF
+
     HAS_FPDF = True
 except ImportError:
     HAS_FPDF = False
@@ -12,9 +13,11 @@ except ImportError:
 # Try to import Google GenAI SDK
 try:
     from google import genai
+
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
+
 
 class ReportService:
     def __init__(self, db):
@@ -22,7 +25,9 @@ class ReportService:
         self.gemini_client = None
         if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
             try:
-                self.gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+                self.gemini_client = genai.Client(
+                    api_key=os.environ.get("GEMINI_API_KEY")
+                )
             except Exception:
                 pass
 
@@ -34,14 +39,42 @@ class ReportService:
 
         # Format context data
         total_occupancy = state.get("occupancy", 0)
-        gates_str = ", ".join([f"{g['name']}: {g['waitTimeMinutes']}m wait" for g in state.get("gates", [])])
-        zones_str = ", ".join([f"{z['name']}: {z['crowdLevel']}% full" for z in state.get("zones", [])])
-        
+        gates_str = ", ".join(
+            [
+                f"{g['name']}: {g['waitTimeMinutes']}m wait"
+                for g in state.get("gates", [])
+            ]
+        )
+        zones_str = ", ".join(
+            [
+                f"{z['name']}: {z['crowdLevel']}% full"
+                for z in state.get("zones", [])
+            ]
+        )
+
         recent_dispatches = dispatches[:5]
-        dispatch_str = "\n".join([f"- Deployed {d['staff_type'].capitalize()} to Zone {d['zone_id']} at {time.strftime('%H:%M:%S', time.localtime(d['timestamp']))}" for d in recent_dispatches]) if recent_dispatches else "- No dispatches recorded"
-        
+        dispatch_str = (
+            "\n".join(
+                [
+                    f"- Deployed {d['staff_type'].capitalize()} to Zone {d['zone_id']} at {time.strftime('%H:%M:%S', time.localtime(d['timestamp']))}"
+                    for d in recent_dispatches
+                ]
+            )
+            if recent_dispatches
+            else "- No dispatches recorded"
+        )
+
         recent_alerts = alerts[:5]
-        alerts_str = "\n".join([f"- [{a['type'].upper()}] {a['message']}" for a in recent_alerts]) if recent_alerts else "- No alerts broadcasted"
+        alerts_str = (
+            "\n".join(
+                [
+                    f"- [{a['type'].upper()}] {a['message']}"
+                    for a in recent_alerts
+                ]
+            )
+            if recent_alerts
+            else "- No alerts broadcasted"
+        )
 
         prompt = f"""
         You are ArenaFlow's Incident & Command Chief Operations Officer 🤖. 
@@ -65,17 +98,18 @@ class ReportService:
         if self.gemini_client:
             try:
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt
+                    model="gemini-1.5-flash", contents=prompt
                 )
                 return response.text
             except Exception as e:
                 print(f"[ReportService] Gemini report error: {e}")
 
         # Local rule-based fallback generator
-        congested = [z["name"] for z in state.get("zones", []) if z["crowdLevel"] > 75]
+        congested = [
+            z["name"] for z in state.get("zones", []) if z["crowdLevel"] > 75
+        ]
         congested_str = ", ".join(congested) if congested else "None"
-        
+
         fallback_report = (
             f"### ARENAFLOW INCIDENT REPORT 📋\n\n"
             f"**1. Executive Summary**:\n"
@@ -102,15 +136,21 @@ class ReportService:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        
+
         # Header / Brand
-        pdf.set_fill_color(18, 22, 41) # Dark space blue header
+        pdf.set_fill_color(18, 22, 41)  # Dark space blue header
         pdf.rect(0, 0, 210, 40, "F")
         pdf.set_text_color(255, 255, 255)
         pdf.set_font("Arial", "B", size=18)
         pdf.cell(0, 10, "ARENAFLOW OPERATIONS COMMAND", ln=1, align="C")
         pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, f"Report Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}", ln=1, align="C")
+        pdf.cell(
+            0,
+            10,
+            f"Report Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}",
+            ln=1,
+            align="C",
+        )
         pdf.ln(15)
 
         # Body
@@ -127,13 +167,15 @@ class ReportService:
             if not cleaned:
                 pdf.ln(4)
                 continue
-            
+
             # Print
             try:
-                pdf.multi_cell(0, 6, cleaned.encode('latin1', 'ignore').decode('latin1'))
+                pdf.multi_cell(
+                    0, 6, cleaned.encode("latin1", "ignore").decode("latin1")
+                )
             except Exception:
                 pdf.multi_cell(0, 6, cleaned)
-                
+
         # Return PDF bytes
         return pdf.output(dest="S")
 
@@ -145,11 +187,17 @@ class ReportService:
 
         summary_data = {
             "current_occupancy": state.get("occupancy"),
-            "gates_wait": [{"name": g["name"], "wait": g["waitTimeMinutes"]} for g in state.get("gates", [])],
-            "zones_crowd": [{"name": z["name"], "density": z["crowdLevel"]} for z in state.get("zones", [])],
+            "gates_wait": [
+                {"name": g["name"], "wait": g["waitTimeMinutes"]}
+                for g in state.get("gates", [])
+            ],
+            "zones_crowd": [
+                {"name": z["name"], "density": z["crowdLevel"]}
+                for z in state.get("zones", [])
+            ],
             "total_alerts": len(alerts),
             "total_dispatches": len(dispatches),
-            "last_dispatch": dispatches[0] if dispatches else None
+            "last_dispatch": dispatches[0] if dispatches else None,
         }
 
         prompt = f"""
@@ -171,8 +219,7 @@ class ReportService:
         if self.gemini_client:
             try:
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt
+                    model="gemini-1.5-flash", contents=prompt
                 )
                 return response.text
             except Exception as e:
@@ -181,18 +228,24 @@ class ReportService:
         # Local fallback answers
         q = question.lower()
         if "cause" in q or "congestion" in q or "busy" in q:
-            congested = [z["name"] for z in state.get("zones", []) if z["crowdLevel"] > 75]
+            congested = [
+                z["name"]
+                for z in state.get("zones", [])
+                if z["crowdLevel"] > 75
+            ]
             if congested:
                 return f"🤖 **Copilot**: The current congestion is primarily located in **{', '.join(congested)}** due to high flow rates. Staff dispatches may be required to manage queues."
             return "🤖 **Copilot**: Concourse levels are currently normal; no significant bottlenecks are detected."
-        
+
         if "gate" in q or "wait" in q:
             gates = state.get("gates", [])
             if gates:
                 slowest = max(gates, key=lambda x: x["waitTimeMinutes"])
                 return f"🤖 **Copilot**: **{slowest['name']}** currently has the highest wait time at **{slowest['waitTimeMinutes']} minutes**."
-            return "🤖 **Copilot**: Gate wait metrics are currently unavailable."
-            
+            return (
+                "🤖 **Copilot**: Gate wait metrics are currently unavailable."
+            )
+
         if "staff" in q or "recommend" in q:
             zones = state.get("zones", [])
             if zones:

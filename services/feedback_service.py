@@ -4,9 +4,11 @@ import os
 # Import Google GenAI SDK
 try:
     from google import genai
+
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
+
 
 class FeedbackService:
     def __init__(self, db):
@@ -14,7 +16,9 @@ class FeedbackService:
         self.gemini_client = None
         if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
             try:
-                self.gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+                self.gemini_client = genai.Client(
+                    api_key=os.environ.get("GEMINI_API_KEY")
+                )
             except Exception:
                 pass
 
@@ -27,15 +31,17 @@ class FeedbackService:
                 "food": int(scores.get("food", 5)),
                 "restrooms": int(scores.get("restrooms", 5)),
                 "security": int(scores.get("security", 5)),
-                "ai_assistant": int(scores.get("ai_assistant", 5))
+                "ai_assistant": int(scores.get("ai_assistant", 5)),
             },
             "comments": str(comments)[:500],
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
         if self.db.use_firebase:
             try:
-                self.db.db.collection("feedbacks").document(feedback["id"]).set(feedback)
+                self.db.db.collection("feedbacks").document(
+                    feedback["id"]
+                ).set(feedback)
             except Exception as e:
                 print(f"[FeedbackService] Firebase write error: {e}")
         else:
@@ -74,7 +80,7 @@ class FeedbackService:
             "food": 0.0,
             "restrooms": 0.0,
             "security": 0.0,
-            "ai_assistant": 0.0
+            "ai_assistant": 0.0,
         }
         comments = []
         for f in feedbacks:
@@ -112,8 +118,7 @@ class FeedbackService:
         if self.gemini_client:
             try:
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt
+                    model="gemini-1.5-flash", contents=prompt
                 )
                 return response.text
             except Exception as e:
@@ -122,7 +127,7 @@ class FeedbackService:
         # Local rule-based summary fallback
         lowest_cat = min(avg_scores, key=avg_scores.get)
         highest_cat = max(avg_scores, key=avg_scores.get)
-        
+
         fallback_summary = (
             f"### Operations Feedback Summary 🤖\n\n"
             f"**Key Findings**:\n"

@@ -3,6 +3,7 @@ from app import require_auth
 
 schedule_bp = Blueprint("schedule_bp", __name__)
 
+
 @schedule_bp.route("/schedule")
 @require_auth
 def schedule_page():

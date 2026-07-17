@@ -1,0 +1,9 @@
+[tool.black]
+line-length = 79
+
+[tool.flake8]
+max-line-length = 79
+exclude = [".git", "__pycache__", "local_db.json"]
+
+[tool.mypy]
+ignore_missing_imports = true

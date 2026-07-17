@@ -3,6 +3,7 @@ from app import require_auth
 
 navigation_bp = Blueprint("navigation_bp", __name__)
 
+
 @navigation_bp.route("/navigation")
 @require_auth
 def navigation_page():

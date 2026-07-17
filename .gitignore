@@ -1,0 +1,28 @@
+# Local DB and service account
+local_db.json
+serviceAccountKey.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Test and cache
+.pytest_cache/
+.mypy_cache/
+
+# Environment files
+.env
+
+# OS
+.DS_Store
+Thumbs.db

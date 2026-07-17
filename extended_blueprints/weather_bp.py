@@ -5,10 +5,12 @@ from extended_services.weather_service import WeatherService
 weather_bp = Blueprint("weather_bp", __name__)
 weather_svc = WeatherService()
 
+
 @weather_bp.route("/weather")
 @require_auth
 def weather_page():
     return render_template("weather.html", username=session.get("username"))
+
 
 @weather_bp.route("/api/weather/data")
 @require_auth

@@ -1,6 +1,6 @@
-import time
-import random
 import os
+import time
+
 
 class WeatherService:
     def __init__(self):
@@ -14,22 +14,22 @@ class WeatherService:
         # If API key exists, we could fetch from OpenWeatherMap API
         # e.g., http://api.openweathermap.org/data/2.5/weather?q=Bangalore&appid=...
         # For reliability and security, we have a complete fallback simulation:
-        
+
         # Base realistic values
         base_temp = 28
         base_humidity = 65
         base_wind = 15
         rain_chance = 15
-        
+
         # Add random walk drift
         seed = int(time.time()) % 10
         temp = base_temp + (seed % 3) - 1
         humidity = base_humidity + (seed % 5) - 2
         wind = base_wind + (seed % 4) - 1
-        
+
         description = "Partly Cloudy"
         advisory = "Excellent weather conditions for the match. Stay hydrated!"
-        
+
         if seed % 4 == 0:
             description = "Clear Skies"
             advisory = "Sunny conditions today. Wear sun protection and buy cold refreshments!"
@@ -45,5 +45,5 @@ class WeatherService:
             "description": description,
             "rain_chance": rain_chance,
             "advisory": advisory,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
