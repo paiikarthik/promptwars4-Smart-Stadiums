@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: arenaflow
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn extended_app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false # User will input this manually in the Render dashboard
