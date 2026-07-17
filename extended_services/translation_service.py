@@ -236,7 +236,9 @@ class TranslationService:
 
     def __init__(self) -> None:
         """Initializes TranslationService and checks configuration."""
-        self.api_key: Optional[str] = os.environ.get("GOOGLE_TRANSLATION_API_KEY")
+        self.api_key: Optional[str] = os.environ.get(
+            "GOOGLE_TRANSLATION_API_KEY"
+        )
 
     def translate_key(self, key: str, target_lang: str) -> str:
         """Translates a specific key to a target language fallback dictionary.

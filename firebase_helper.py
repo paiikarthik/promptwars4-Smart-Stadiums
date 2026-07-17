@@ -50,7 +50,10 @@ class StadiumDB:
                     logger.info(
                         "[StadiumDB] Initialized successfully using Firebase Firestore."
                     )
-                except (ValueError, google.api_core.exceptions.GoogleAPIError) as e:
+                except (
+                    ValueError,
+                    google.api_core.exceptions.GoogleAPIError,
+                ) as e:
                     logger.error(
                         f"[StadiumDB] Firebase initialization failed: {e}. Falling back to Local DB."
                     )
@@ -78,18 +81,54 @@ class StadiumDB:
                 "occupancy": 52000,
                 "capacity": 70000,
                 "gates": [
-                    {"id": "gate-n", "name": "North Gate", "waitTimeMinutes": 12},
-                    {"id": "gate-s", "name": "South Gate", "waitTimeMinutes": 8},
-                    {"id": "gate-e", "name": "East Gate", "waitTimeMinutes": 22},
-                    {"id": "gate-w", "name": "West Gate", "waitTimeMinutes": 4},
+                    {
+                        "id": "gate-n",
+                        "name": "North Gate",
+                        "waitTimeMinutes": 12,
+                    },
+                    {
+                        "id": "gate-s",
+                        "name": "South Gate",
+                        "waitTimeMinutes": 8,
+                    },
+                    {
+                        "id": "gate-e",
+                        "name": "East Gate",
+                        "waitTimeMinutes": 22,
+                    },
+                    {
+                        "id": "gate-w",
+                        "name": "West Gate",
+                        "waitTimeMinutes": 4,
+                    },
                 ],
                 "zones": [
-                    {"id": "zone-nc", "name": "North Concourse", "crowdLevel": 45},
-                    {"id": "zone-sc", "name": "South Concourse", "crowdLevel": 62},
-                    {"id": "zone-food", "name": "Food Court A", "crowdLevel": 85},
-                    {"id": "zone-merch", "name": "Merch Stand", "crowdLevel": 78},
+                    {
+                        "id": "zone-nc",
+                        "name": "North Concourse",
+                        "crowdLevel": 45,
+                    },
+                    {
+                        "id": "zone-sc",
+                        "name": "South Concourse",
+                        "crowdLevel": 62,
+                    },
+                    {
+                        "id": "zone-food",
+                        "name": "Food Court A",
+                        "crowdLevel": 85,
+                    },
+                    {
+                        "id": "zone-merch",
+                        "name": "Merch Stand",
+                        "crowdLevel": 78,
+                    },
                     {"id": "zone-vip", "name": "VIP Lounge", "crowdLevel": 35},
-                    {"id": "zone-main", "name": "Main Entrance", "crowdLevel": 55},
+                    {
+                        "id": "zone-main",
+                        "name": "Main Entrance",
+                        "crowdLevel": 55,
+                    },
                 ],
                 "amenities": [
                     {
@@ -132,7 +171,9 @@ class StadiumDB:
             if not os.path.exists(self.local_db_path):
                 default_data = self._get_default_db_data()
                 self._write_local_db(default_data)
-                logger.info("[StadiumDB] Initialized fresh Local JSON database.")
+                logger.info(
+                    "[StadiumDB] Initialized fresh Local JSON database."
+                )
             else:
                 logger.info("[StadiumDB] Found existing Local JSON database.")
 
@@ -169,7 +210,9 @@ class StadiumDB:
 
     # --- USER AUTHENTICATION METHODS ---
 
-    def register_user(self, username: str, password_hash: str, role: str) -> bool:
+    def register_user(
+        self, username: str, password_hash: str, role: str
+    ) -> bool:
         """Registers a new user profile.
 
         Args:
@@ -246,7 +289,9 @@ class StadiumDB:
         """
         if self.use_firebase:
             try:
-                self.db.collection("simulation_state").document("current").set(state)
+                self.db.collection("simulation_state").document("current").set(
+                    state
+                )
             except google.api_core.exceptions.GoogleAPIError as e:
                 logger.error(f"[StadiumDB] Firebase save_state error: {e}")
         else:
@@ -263,7 +308,11 @@ class StadiumDB:
         """
         if self.use_firebase:
             try:
-                doc = self.db.collection("simulation_state").document("current").get()
+                doc = (
+                    self.db.collection("simulation_state")
+                    .document("current")
+                    .get()
+                )
                 if doc.exists:
                     state_dict: Dict[str, Any] = doc.to_dict()
                     return state_dict
@@ -278,7 +327,9 @@ class StadiumDB:
 
     # --- ALERTS & BROADCASTS METHODS ---
 
-    def add_alert(self, message: str, alert_type: str = "info", auto: bool = False) -> Dict[str, Any]:
+    def add_alert(
+        self, message: str, alert_type: str = "info", auto: bool = False
+    ) -> Dict[str, Any]:
         """Adds a warning/alert notification.
 
         Args:
@@ -320,7 +371,9 @@ class StadiumDB:
             try:
                 docs = (
                     self.db.collection("alerts")
-                    .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                    .order_by(
+                        "timestamp", direction=firestore.Query.DESCENDING
+                    )
                     .stream()
                 )
                 return [doc.to_dict() for doc in docs]
@@ -347,7 +400,9 @@ class StadiumDB:
                 for doc in docs:
                     doc.reference.delete()
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[StadiumDB] Firebase clear_auto_alerts error: {e}")
+                logger.error(
+                    f"[StadiumDB] Firebase clear_auto_alerts error: {e}"
+                )
         else:
             with self.lock:
                 data = self._read_local_db()
@@ -376,7 +431,9 @@ class StadiumDB:
         }
         if self.use_firebase:
             try:
-                self.db.collection("dispatches").document(dispatch["id"]).set(dispatch)
+                self.db.collection("dispatches").document(dispatch["id"]).set(
+                    dispatch
+                )
                 return dispatch
             except google.api_core.exceptions.GoogleAPIError as e:
                 logger.error(f"[StadiumDB] Firebase log_dispatch error: {e}")
@@ -397,7 +454,9 @@ class StadiumDB:
             try:
                 docs = (
                     self.db.collection("dispatches")
-                    .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                    .order_by(
+                        "timestamp", direction=firestore.Query.DESCENDING
+                    )
                     .stream()
                 )
                 return [doc.to_dict() for doc in docs]

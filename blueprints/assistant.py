@@ -3,13 +3,7 @@ import os
 from typing import Dict, Any, Union, Tuple
 from flask import Blueprint, jsonify, request, Response
 
-from app import (
-    require_auth,
-    current_state_lock,
-    db,
-    gemini_client,
-    logger
-)
+from app import require_auth, current_state_lock, db, gemini_client, logger
 
 assistant_bp = Blueprint("assistant", __name__)
 
@@ -167,7 +161,12 @@ def assistant_chat() -> Union[Response, Tuple[Response, int]]:
 
     if len(user_query) > 500:
         return (
-            jsonify({"status": "error", "message": "Message exceeds maximum allowed length of 500 characters"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Message exceeds maximum allowed length of 500 characters",
+                }
+            ),
             400,
         )
 

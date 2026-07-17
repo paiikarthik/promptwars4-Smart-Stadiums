@@ -47,7 +47,9 @@ class SOSService:
 
         if self.db.use_firebase:
             try:
-                self.db.db.collection("sos_alerts").document(sos["id"]).set(sos)
+                self.db.db.collection("sos_alerts").document(sos["id"]).set(
+                    sos
+                )
             except google.api_core.exceptions.GoogleAPIError as e:
                 logger.error(f"[SOSService] Firebase write error: {e}")
         else:

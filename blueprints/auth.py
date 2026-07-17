@@ -1,5 +1,14 @@
 from typing import Union, Tuple
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+    Response,
+)
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, limiter, USERNAME_PATTERN, sanitize_html

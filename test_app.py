@@ -1,4 +1,5 @@
 import os
+
 os.environ["TESTING"] = "true"
 import json  # noqa: E402
 import unittest  # noqa: E402
@@ -309,6 +310,7 @@ class ArenaFlowTest(unittest.TestCase):
     def test_strict_input_validation(self):
         # 1. Register and Login
         from werkzeug.security import generate_password_hash
+
         db.register_user("fan", generate_password_hash("fanpass"), "attendee")
         self.client.post(
             "/api/auth/login",
@@ -392,9 +394,16 @@ class ArenaFlowTest(unittest.TestCase):
 
         # Test security headers are present on responses
         self.assertEqual(response.headers.get("X-Frame-Options"), "DENY")
-        self.assertEqual(response.headers.get("X-Content-Type-Options"), "nosniff")
-        self.assertEqual(response.headers.get("X-XSS-Protection"), "1; mode=block")
-        self.assertIn("default-src 'self'", response.headers.get("Content-Security-Policy"))
+        self.assertEqual(
+            response.headers.get("X-Content-Type-Options"), "nosniff"
+        )
+        self.assertEqual(
+            response.headers.get("X-XSS-Protection"), "1; mode=block"
+        )
+        self.assertIn(
+            "default-src 'self'",
+            response.headers.get("Content-Security-Policy"),
+        )
 
 
 if __name__ == "__main__":

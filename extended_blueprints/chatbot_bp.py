@@ -1,7 +1,14 @@
 from functools import wraps
 from urllib.parse import urlparse
 from typing import Any, Callable, Dict, List, Union, Optional
-from flask import Blueprint, jsonify, render_template, request, session, Response
+from flask import (
+    Blueprint,
+    jsonify,
+    render_template,
+    request,
+    session,
+    Response,
+)
 from app import db, require_auth
 from extended_services.chatbot_service import ChatbotService
 from extended_services.translation_service import TranslationService
@@ -34,7 +41,12 @@ def verify_same_origin(f: Callable[..., Any]) -> Callable[..., Any]:
             origin_parsed = urlparse(origin)
             if origin_parsed.netloc != host_parsed.netloc:
                 return (
-                    jsonify({"status": "error", "message": "Cross-origin request blocked"}),
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Cross-origin request blocked",
+                        }
+                    ),
                     403,
                 )
 
@@ -43,7 +55,12 @@ def verify_same_origin(f: Callable[..., Any]) -> Callable[..., Any]:
             referer_parsed = urlparse(referer)
             if referer_parsed.netloc != host_parsed.netloc:
                 return (
-                    jsonify({"status": "error", "message": "Cross-origin request blocked"}),
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Cross-origin request blocked",
+                        }
+                    ),
                     403,
                 )
 
@@ -83,7 +100,12 @@ def chatbot_message() -> Union[Response, tuple[Response, int]]:
     # Security: Limit query length to prevent buffer flooding
     if len(msg) > 500:
         return (
-            jsonify({"status": "error", "message": "Message is too long (max 500 chars)"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Message is too long (max 500 chars)",
+                }
+            ),
             400,
         )
 
@@ -112,7 +134,19 @@ def translate_api() -> Union[Response, tuple[Response, int]]:
 
     # Restrict supported languages
     supported_langs: List[str] = [
-        "en", "hi", "kn", "ta", "te", "ml", "mr", "gu", "pa", "bn", "ur", "or", "kok"
+        "en",
+        "hi",
+        "kn",
+        "ta",
+        "te",
+        "ml",
+        "mr",
+        "gu",
+        "pa",
+        "bn",
+        "ur",
+        "or",
+        "kok",
     ]
     if lang not in supported_langs:
         lang = "en"

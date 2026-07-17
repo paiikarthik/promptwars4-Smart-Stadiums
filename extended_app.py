@@ -37,7 +37,9 @@ def _inject_extended_html(html: str) -> str:
         str: Modified HTML with menus and scripts injected.
     """
     # Inject new navigation buttons before the Logout button
-    old_button = '<button class="btn-logout" onclick="handleLogout()">Logout</button>'
+    old_button = (
+        '<button class="btn-logout" onclick="handleLogout()">Logout</button>'
+    )
     if old_button in html:
         menu_injection = (
             '<a href="/extended/chatbot" class="toggle-btn" style="margin-right:10px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:auto; padding:0.4rem 0.8rem; font-size:0.8rem;">🤖 Super Assistant</a>'

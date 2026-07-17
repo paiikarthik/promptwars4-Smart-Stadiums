@@ -37,9 +37,13 @@ class FeedbackService:
                     api_key=os.environ.get("GEMINI_API_KEY")
                 )
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[FeedbackService] Gemini client initialization error: {e}")
+                logger.error(
+                    f"[FeedbackService] Gemini client initialization error: {e}"
+                )
 
-    def submit_feedback(self, scores: Dict[str, Any], comments: str) -> Dict[str, Any]:
+    def submit_feedback(
+        self, scores: Dict[str, Any], comments: str
+    ) -> Dict[str, Any]:
         """Saves a feedback submission containing ratings and comments.
 
         Args:
@@ -96,7 +100,9 @@ class FeedbackService:
                 data = self.db._read_local_db()
                 return data.get("feedbacks", [])
 
-    def _calculate_average_scores(self, feedbacks: List[Dict[str, Any]]) -> Tuple[int, Dict[str, float], List[str]]:
+    def _calculate_average_scores(
+        self, feedbacks: List[Dict[str, Any]]
+    ) -> Tuple[int, Dict[str, float], List[str]]:
         """Averages scores and extracts comments from feedbacks.
 
         Args:
@@ -167,7 +173,9 @@ class FeedbackService:
                 res_text: str = response.text
                 return res_text
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[FeedbackService] Gemini content generation error: {e}")
+                logger.error(
+                    f"[FeedbackService] Gemini content generation error: {e}"
+                )
 
         # Local rule-based summary fallback
         lowest_cat = min(avg_scores, key=avg_scores.get)

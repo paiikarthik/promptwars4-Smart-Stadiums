@@ -1,7 +1,14 @@
 import queue
 import time
 from typing import Union, Tuple
-from flask import Blueprint, jsonify, render_template, request, session, Response
+from flask import (
+    Blueprint,
+    jsonify,
+    render_template,
+    request,
+    session,
+    Response,
+)
 
 from app import (
     db,
@@ -13,7 +20,7 @@ from app import (
     sse_listeners,
     report_svc,
     sos_svc,
-    sanitize_html
+    sanitize_html,
 )
 
 admin_bp = Blueprint("admin", __name__)
@@ -85,7 +92,11 @@ def admin_dispatch() -> Union[Response, Tuple[Response, int]]:
     staff_type: str = str(data.get("type", "security"))  # security or medical
     zone_id: str = str(data.get("zone_id", ""))
 
-    if staff_type not in ["security", "medical"] or not zone_id or len(zone_id) > 50:
+    if (
+        staff_type not in ["security", "medical"]
+        or not zone_id
+        or len(zone_id) > 50
+    ):
         return (
             jsonify(
                 {"status": "error", "message": "Invalid dispatch details"}
@@ -128,6 +139,7 @@ def admin_dispatch() -> Union[Response, Tuple[Response, int]]:
 
 
 # --- REPORT GENERATOR ---
+
 
 @admin_bp.route("/incident-report")
 @require_admin
@@ -199,6 +211,7 @@ def get_match_summary_pdf() -> Union[Response, Tuple[Response, int]]:
 
 # --- AI OPERATIONS COPILOT ---
 
+
 @admin_bp.route("/api/copilot/chat", methods=["POST"])
 @require_admin
 def copilot_chat() -> Union[Response, Tuple[Response, int]]:
@@ -212,7 +225,12 @@ def copilot_chat() -> Union[Response, Tuple[Response, int]]:
         )
     if len(message) > 500:
         return (
-            jsonify({"status": "error", "message": "Message cannot exceed 500 characters"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Message cannot exceed 500 characters",
+                }
+            ),
             400,
         )
     reply = report_svc.run_operations_copilot(message)
@@ -220,6 +238,7 @@ def copilot_chat() -> Union[Response, Tuple[Response, int]]:
 
 
 # --- ANALYTICS ---
+
 
 @admin_bp.route("/analytics")
 @require_admin
@@ -229,6 +248,7 @@ def analytics_page() -> str:
 
 
 # --- SOS UPDATE & LIST ---
+
 
 @admin_bp.route("/api/sos/list")
 @require_admin
@@ -246,7 +266,11 @@ def update_sos() -> Union[Response, Tuple[Response, int]]:
     sos_id: str = str(data.get("id", ""))
     status: str = str(data.get("status", ""))
 
-    if not sos_id or len(sos_id) > 100 or status not in ["Accepted", "Resolved", "Pending"]:
+    if (
+        not sos_id
+        or len(sos_id) > 100
+        or status not in ["Accepted", "Resolved", "Pending"]
+    ):
         return (
             jsonify(
                 {"status": "error", "message": "Invalid input parameters"}
@@ -267,6 +291,7 @@ def update_sos() -> Union[Response, Tuple[Response, int]]:
 
 # --- LOST & FOUND UPDATE & FEEDBACK SUMMARY ---
 
+
 @admin_bp.route("/api/lost-found/update", methods=["POST"])
 @require_admin
 def update_lost_found() -> Union[Response, Tuple[Response, int]]:
@@ -275,7 +300,11 @@ def update_lost_found() -> Union[Response, Tuple[Response, int]]:
     item_id: str = str(data.get("id", ""))
     status: str = str(data.get("status", "Claimed"))
 
-    if not item_id or len(item_id) > 100 or status not in ["Claimed", "Found", "Lost"]:
+    if (
+        not item_id
+        or len(item_id) > 100
+        or status not in ["Claimed", "Found", "Lost"]
+    ):
         return (
             jsonify(
                 {"status": "error", "message": "Invalid input parameters"}
@@ -314,5 +343,6 @@ def update_lost_found() -> Union[Response, Tuple[Response, int]]:
 def get_feedback_summary() -> Response:
     """Returns feedback metrics summary, including average scores."""
     from app import feedback_svc
+
     summary = feedback_svc.generate_feedback_summary()
     return jsonify({"status": "success", "summary": summary})

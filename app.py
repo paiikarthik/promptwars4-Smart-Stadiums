@@ -104,6 +104,7 @@ if HAS_GENAI and os.environ.get("GEMINI_API_KEY"):
 
 # --- INPUT SANITIZATION UTILITY ---
 
+
 def sanitize_html(text):
     """Strips HTML script tags and normalizes input to prevent XSS injection."""
     if not isinstance(text, str):
@@ -130,12 +131,16 @@ def sanitize_html(text):
 
 # --- ROLE-BASED ACCESS CONTROL DECORATORS ---
 
+
 def require_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "username" not in session:
             if request.path.startswith("/api/"):
-                return jsonify({"status": "error", "message": "Unauthorized"}), 401
+                return (
+                    jsonify({"status": "error", "message": "Unauthorized"}),
+                    401,
+                )
             return redirect(url_for("auth.portal"))
         return f(*args, **kwargs)
 
@@ -147,7 +152,10 @@ def require_admin(f):
     def decorated_function(*args, **kwargs):
         if "username" not in session:
             if request.path.startswith("/api/"):
-                return jsonify({"status": "error", "message": "Unauthorized"}), 401
+                return (
+                    jsonify({"status": "error", "message": "Unauthorized"}),
+                    401,
+                )
             return redirect(url_for("auth.portal"))
         if session.get("role") != "admin":
             if request.path.startswith("/api/"):
@@ -210,6 +218,7 @@ def check_csrf():
 
 # --- DYNAMIC CSRF META TAG INJECTION HOOK ---
 
+
 @app.after_request
 def inject_csrf_token(response):
     """Dynamically injects CSRF meta tag into HTML responses."""
@@ -228,6 +237,7 @@ def inject_csrf_token(response):
 
 # --- HTTP SECURITY HEADERS & ERROR HANDLERS ---
 
+
 @app.after_request
 def add_security_headers(response):
     """Enforces standard HTTP security headers globally."""
@@ -245,14 +255,21 @@ def add_security_headers(response):
     )
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if not app.config.get("TESTING") and not app.debug:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
     return response
 
 
 @app.errorhandler(400)
 def bad_request(e):
     if request.path.startswith("/api/"):
-        return jsonify({"status": "error", "message": f"Bad Request: {e.description}"}), 400
+        return (
+            jsonify(
+                {"status": "error", "message": f"Bad Request: {e.description}"}
+            ),
+            400,
+        )
     return render_template("portal.html", error="Bad request"), 400
 
 
@@ -266,14 +283,22 @@ def unauthorized(e):
 @app.errorhandler(403)
 def forbidden(e):
     if request.path.startswith("/api/"):
-        return jsonify({"status": "error", "message": "Forbidden. Access denied."}), 403
+        return (
+            jsonify(
+                {"status": "error", "message": "Forbidden. Access denied."}
+            ),
+            403,
+        )
     return redirect(url_for("core.dashboard")), 403
 
 
 @app.errorhandler(404)
 def not_found(e):
     if request.path.startswith("/api/"):
-        return jsonify({"status": "error", "message": "Resource not found"}), 404
+        return (
+            jsonify({"status": "error", "message": "Resource not found"}),
+            404,
+        )
     return render_template("portal.html", error="Page not found"), 404
 
 
@@ -281,11 +306,20 @@ def not_found(e):
 def internal_server_error(e):
     logger.error(f"Internal Server Error: {e}")
     if request.path.startswith("/api/"):
-        return jsonify({"status": "error", "message": "Internal Server Error"}), 500
-    return render_template("portal.html", error="An internal server error occurred"), 500
+        return (
+            jsonify({"status": "error", "message": "Internal Server Error"}),
+            500,
+        )
+    return (
+        render_template(
+            "portal.html", error="An internal server error occurred"
+        ),
+        500,
+    )
 
 
 # --- STATE DRIFT SIMULATION ENGINE ---
+
 
 def _drift_telemetry_occupancy(state: Dict[str, Any]) -> None:
     """Helper to drift occupancy stats.
@@ -320,7 +354,9 @@ def _drift_telemetry_metrics(state: Dict[str, Any]) -> None:
         )
 
 
-def _check_and_trigger_auto_alerts(state: Dict[str, Any], alerts: List[Dict[str, Any]]) -> None:
+def _check_and_trigger_auto_alerts(
+    state: Dict[str, Any], alerts: List[Dict[str, Any]]
+) -> None:
     """Helper to clean and trigger automated simulation alerts.
 
     Args:

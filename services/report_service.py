@@ -46,9 +46,13 @@ class ReportService:
                     api_key=os.environ.get("GEMINI_API_KEY")
                 )
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[ReportService] Gemini initialization error: {e}")
+                logger.error(
+                    f"[ReportService] Gemini initialization error: {e}"
+                )
 
-    def _format_telemetry_summary(self, state: Dict[str, Any]) -> Tuple[int, str, str]:
+    def _format_telemetry_summary(
+        self, state: Dict[str, Any]
+    ) -> Tuple[int, str, str]:
         """Formats current crowd, gate wait times, and zone density summaries.
 
         Args:
@@ -72,7 +76,9 @@ class ReportService:
         )
         return total_occupancy, gates_str, zones_str
 
-    def _format_recent_logs(self, dispatches: List[Dict[str, Any]], alerts: List[Dict[str, Any]]) -> Tuple[str, str]:
+    def _format_recent_logs(
+        self, dispatches: List[Dict[str, Any]], alerts: List[Dict[str, Any]]
+    ) -> Tuple[str, str]:
         """Formats lists of recent dispatches and alerts for reports.
 
         Args:
@@ -117,7 +123,9 @@ class ReportService:
         alerts: List[Dict[str, Any]] = self.db.get_alerts()
         dispatches: List[Dict[str, Any]] = self.db.get_dispatches()
 
-        total_occupancy, gates_str, zones_str = self._format_telemetry_summary(state)
+        total_occupancy, gates_str, zones_str = self._format_telemetry_summary(
+            state
+        )
         dispatch_str, alerts_str = self._format_recent_logs(dispatches, alerts)
 
         prompt = f"""
@@ -147,7 +155,9 @@ class ReportService:
                 res_text: str = response.text
                 return res_text
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[ReportService] Gemini report generation error: {e}")
+                logger.error(
+                    f"[ReportService] Gemini report generation error: {e}"
+                )
 
         # Local rule-based fallback generator
         congested = [
@@ -201,7 +211,9 @@ class ReportService:
         pdf.set_font("Arial", size=11)
         pdf.ln(5)
 
-    def export_report_to_pdf(self, report_text: str, title: str = "Incident_Report") -> Optional[bytes]:
+    def export_report_to_pdf(
+        self, report_text: str, title: str = "Incident_Report"
+    ) -> Optional[bytes]:
         """Compiles FPDF document and returns raw bytes of PDF.
 
         Args:
@@ -237,7 +249,9 @@ class ReportService:
         val_bytes: bytes = pdf.output(dest="S")
         return val_bytes
 
-    def _get_local_copilot_response(self, question: str, state: Dict[str, Any]) -> str:
+    def _get_local_copilot_response(
+        self, question: str, state: Dict[str, Any]
+    ) -> str:
         """Processes simple queries through rule-based matching.
 
         Args:
@@ -263,7 +277,9 @@ class ReportService:
             if gates:
                 slowest = max(gates, key=lambda x: x["waitTimeMinutes"])
                 return f"📋 **Copilot**: **{slowest['name']}** currently has the highest wait time at **{slowest['waitTimeMinutes']} minutes**."
-            return "📋 **Copilot**: Gate wait metrics are currently unavailable."
+            return (
+                "📋 **Copilot**: Gate wait metrics are currently unavailable."
+            )
 
         if "staff" in q or "recommend" in q:
             zones = state.get("zones", [])

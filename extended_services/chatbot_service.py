@@ -38,7 +38,9 @@ class ChatbotService:
                     api_key=os.environ.get("GEMINI_API_KEY")
                 )
             except google.api_core.exceptions.GoogleAPIError as e:
-                logger.error(f"[ChatbotService] Gemini initialization failed: {e}")
+                logger.error(
+                    f"[ChatbotService] Gemini initialization failed: {e}"
+                )
 
     def _get_static_grounding_data(self) -> Dict[str, Any]:
         """Provides static match, transit, tourist landmarks, and sustainability metadata.
@@ -49,9 +51,18 @@ class ChatbotService:
         schedule = {
             "today": "Group Stage B - USA vs England (Starts at 19:30)",
             "week": [
-                {"day": "Friday", "match": "Group Stage A - Argentina vs France"},
-                {"day": "Saturday", "match": "Group Stage C - Mexico vs Spain"},
-                {"day": "Sunday", "match": "Group Stage D - Canada vs Morocco"},
+                {
+                    "day": "Friday",
+                    "match": "Group Stage A - Argentina vs France",
+                },
+                {
+                    "day": "Saturday",
+                    "match": "Group Stage C - Mexico vs Spain",
+                },
+                {
+                    "day": "Sunday",
+                    "match": "Group Stage D - Canada vs Morocco",
+                },
             ],
         }
         tourist_info = {
@@ -136,7 +147,10 @@ class ChatbotService:
                 f"- Saturday: Mexico vs Spain\n"
                 f"- Sunday: Canada vs Morocco"
             )
-        if any(w in q for w in ["sustainability", "eco", "green", "recycle", "carbon"]):
+        if any(
+            w in q
+            for w in ["sustainability", "eco", "green", "recycle", "carbon"]
+        ):
             return (
                 f"🤖 **Assistant (FIFA 2026 Sustainability Program)**:\n"
                 f"- **Eco Water**: {context['sustainability_program']['water_stations']}\n"
@@ -156,7 +170,10 @@ class ChatbotService:
             return f"🤖 **Assistant**: **Restrooms**: {context['restroom_locations']}"
         if "medical" in q or "hospital" in q or "doctor" in q:
             return f"🤖 **Assistant**: **Medical Support**: {context['medical_centers']}"
-        if any(w in q for w in ["metro", "hotel", "airport", "restaurant", "tourist"]):
+        if any(
+            w in q
+            for w in ["metro", "hotel", "airport", "restaurant", "tourist"]
+        ):
             return (
                 f"🤖 **Assistant (Tourist Hub)**:\n"
                 f"- **Metro**: {context['tourist_and_places']['nearest_metro']}\n"
@@ -196,7 +213,11 @@ class ChatbotService:
         """
 
         if self.gemini_client:
-            for m in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
+            for m in [
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
+            ]:
                 try:
                     response = self.gemini_client.models.generate_content(
                         model=m,

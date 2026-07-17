@@ -18,7 +18,9 @@ class AnalyticsService:
         """
         self.db: StadiumDB = db
 
-    def _compute_crowd_trends(self, current_occupancy: int, capacity: int) -> List[Dict[str, Any]]:
+    def _compute_crowd_trends(
+        self, current_occupancy: int, capacity: int
+    ) -> List[Dict[str, Any]]:
         """Simulates 2 hours of historical crowd trends in 10-minute intervals.
 
         Args:
@@ -51,7 +53,7 @@ class AnalyticsService:
         self,
         gates: List[Dict[str, Any]],
         dispatches: List[Dict[str, Any]],
-        alerts: List[Dict[str, Any]]
+        alerts: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Calculates peak metrics, staff dispatches, and alerts.
 
@@ -79,7 +81,9 @@ class AnalyticsService:
         avg_wait: float = sum(gate_times) / len(gate_times)
 
         ai_chat_queries: int = 24 + len(dispatches) * 3 + random.randint(1, 10)
-        fan_page_views: int = 152 + len(dispatches) * 12 + random.randint(5, 30)
+        fan_page_views: int = (
+            152 + len(dispatches) * 12 + random.randint(5, 30)
+        )
 
         return {
             "peakWaitTime": peak_wait,

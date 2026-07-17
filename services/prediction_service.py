@@ -18,7 +18,9 @@ class PredictionService:
         """
         self.db: StadiumDB = db
 
-    def _predict_zone_level(self, current_level: int, total_staff: int, duration_minutes: int) -> int:
+    def _predict_zone_level(
+        self, current_level: int, total_staff: int, duration_minutes: int
+    ) -> int:
         """Calculates predicted crowd level for a single zone based on duration and staff.
 
         Args:
@@ -69,7 +71,11 @@ class PredictionService:
         zones: List[Dict[str, Any]] = state.get("zones", [])
         dispatches: Dict[str, Any] = state.get("staff", {}).copy()
 
-        predictions: Dict[str, List[Dict[str, Any]]] = {"5_min": [], "10_min": [], "30_min": []}
+        predictions: Dict[str, List[Dict[str, Any]]] = {
+            "5_min": [],
+            "10_min": [],
+            "30_min": [],
+        }
 
         for zone in zones:
             zone_id: str = zone["id"]
@@ -92,7 +98,9 @@ class PredictionService:
             total_staff: int = sec_deployed + med_deployed
 
             for duration in [5, 10, 30]:
-                pred: int = self._predict_zone_level(current_level, total_staff, duration)
+                pred: int = self._predict_zone_level(
+                    current_level, total_staff, duration
+                )
                 predictions[f"{duration}_min"].append(
                     {
                         "zone_id": zone_id,

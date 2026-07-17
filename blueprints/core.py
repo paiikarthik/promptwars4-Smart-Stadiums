@@ -3,7 +3,16 @@ import queue
 import time
 import google.api_core.exceptions
 from typing import Union, Tuple, Dict, Any
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+    Response,
+)
 
 from app import (
     db,
@@ -16,7 +25,7 @@ from app import (
     feedback_svc,
     sos_svc,
     sanitize_html,
-    logger
+    logger,
 )
 
 core_bp = Blueprint("core", __name__)
@@ -100,15 +109,28 @@ def submit_feedback() -> Union[Response, Tuple[Response, int]]:
 
     if not isinstance(scores, dict):
         return (
-            jsonify({"status": "error", "message": "Scores must be a JSON object"}),
+            jsonify(
+                {"status": "error", "message": "Scores must be a JSON object"}
+            ),
             400,
         )
 
-    valid_categories = ["navigation", "food", "restrooms", "security", "ai_assistant"]
+    valid_categories = [
+        "navigation",
+        "food",
+        "restrooms",
+        "security",
+        "ai_assistant",
+    ]
     for category, val in scores.items():
         if category not in valid_categories:
             return (
-                jsonify({"status": "error", "message": f"Invalid score category: {category}"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Invalid score category: {category}",
+                    }
+                ),
                 400,
             )
         try:
@@ -118,13 +140,23 @@ def submit_feedback() -> Union[Response, Tuple[Response, int]]:
             scores[category] = val_int
         except (ValueError, TypeError):
             return (
-                jsonify({"status": "error", "message": f"Score for {category} must be an integer between 1 and 5"}),
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": f"Score for {category} must be an integer between 1 and 5",
+                    }
+                ),
                 400,
             )
 
     if len(comments) > 1000:
         return (
-            jsonify({"status": "error", "message": "Comments cannot exceed 1000 characters"}),
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Comments cannot exceed 1000 characters",
+                }
+            ),
             400,
         )
 
@@ -150,7 +182,9 @@ def send_sos() -> Union[Response, Tuple[Response, int]]:
 
     if len(seat) > 50 or len(zone_id) > 50:
         return (
-            jsonify({"status": "error", "message": "Seat or Zone ID too long"}),
+            jsonify(
+                {"status": "error", "message": "Seat or Zone ID too long"}
+            ),
             400,
         )
 
@@ -222,7 +256,9 @@ def submit_lost_found() -> Union[Response, Tuple[Response, int]]:
         or len(contact) > 100
     ):
         return (
-            jsonify({"status": "error", "message": "Input length bounds exceeded"}),
+            jsonify(
+                {"status": "error", "message": "Input length bounds exceeded"}
+            ),
             400,
         )
 
@@ -374,5 +410,6 @@ def get_weather() -> Response:
 def get_analytics_data_core() -> Response:
     """Retrieves operational statistics metrics."""
     from app import analytics_svc
+
     data = analytics_svc.get_analytics()
     return jsonify({"status": "success", "metrics": data})

@@ -58,12 +58,48 @@ def seat_map_data() -> Response:
     """
     # 6 sections representing major stadium blocks
     sections: List[Dict[str, Any]] = [
-        {"id": "sec-a", "name": "North Stand A", "total": 100, "rows": 5, "seats_per_row": 20},
-        {"id": "sec-b", "name": "East Stand B", "total": 150, "rows": 6, "seats_per_row": 25},
-        {"id": "sec-vip", "name": "VIP Platinum", "total": 50, "rows": 5, "seats_per_row": 10},
-        {"id": "sec-d", "name": "South Stand D (Accessible)", "total": 80, "rows": 4, "seats_per_row": 20},
-        {"id": "sec-e", "name": "West Stand E", "total": 120, "rows": 6, "seats_per_row": 20},
-        {"id": "sec-f", "name": "Concourse Upper F", "total": 200, "rows": 8, "seats_per_row": 25},
+        {
+            "id": "sec-a",
+            "name": "North Stand A",
+            "total": 100,
+            "rows": 5,
+            "seats_per_row": 20,
+        },
+        {
+            "id": "sec-b",
+            "name": "East Stand B",
+            "total": 150,
+            "rows": 6,
+            "seats_per_row": 25,
+        },
+        {
+            "id": "sec-vip",
+            "name": "VIP Platinum",
+            "total": 50,
+            "rows": 5,
+            "seats_per_row": 10,
+        },
+        {
+            "id": "sec-d",
+            "name": "South Stand D (Accessible)",
+            "total": 80,
+            "rows": 4,
+            "seats_per_row": 20,
+        },
+        {
+            "id": "sec-e",
+            "name": "West Stand E",
+            "total": 120,
+            "rows": 6,
+            "seats_per_row": 20,
+        },
+        {
+            "id": "sec-f",
+            "name": "Concourse Upper F",
+            "total": 200,
+            "rows": 8,
+            "seats_per_row": 25,
+        },
     ]
 
     seats_by_section: Dict[str, List[Dict[str, Any]]] = {}
