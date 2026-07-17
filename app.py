@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from functools import wraps
+from urllib.parse import urlparse
 
 from flask import (
     Flask,
@@ -122,10 +123,19 @@ def is_safe_origin_or_referer() -> bool:
     origin = request.headers.get("Origin")
     referer = request.headers.get("Referer")
     host_url = request.host_url
-    if origin and origin not in host_url:
-        return False
-    if referer and host_url not in referer:
-        return False
+
+    host_parsed = urlparse(host_url)
+
+    if origin:
+        origin_parsed = urlparse(origin)
+        if origin_parsed.netloc != host_parsed.netloc:
+            return False
+
+    if referer:
+        referer_parsed = urlparse(referer)
+        if referer_parsed.netloc != host_parsed.netloc:
+            return False
+
     return bool(origin or referer)
 
 
@@ -400,6 +410,17 @@ def login():
                 {
                     "status": "error",
                     "message": "Username and password are required",
+                }
+            ),
+            400,
+        )
+
+    if not USERNAME_PATTERN.match(username):
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "Invalid username format",
                 }
             ),
             400,
@@ -976,6 +997,15 @@ def update_sos():
     data = request.json or {}
     sos_id = data.get("id")
     status = data.get("status")
+
+    if not sos_id or status not in ["Accepted", "Resolved", "Pending"]:
+        return (
+            jsonify(
+                {"status": "error", "message": "Invalid input parameters"}
+            ),
+            400,
+        )
+
     success = sos_svc.update_sos_status(sos_id, status)
     if success:
         return jsonify({"status": "success", "message": "SOS status updated."})
@@ -1065,6 +1095,14 @@ def update_lost_found():
     data = request.json or {}
     item_id = data.get("id")
     status = data.get("status", "Claimed")
+
+    if not item_id or status not in ["Claimed", "Found", "Lost"]:
+        return (
+            jsonify(
+                {"status": "error", "message": "Invalid input parameters"}
+            ),
+            400,
+        )
 
     if db.use_firebase:
         try:
@@ -1185,5 +1223,6 @@ def get_weather():
 # --- SERVER STARTUP ---
 
 if __name__ == "__main__":
+    host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", 8080))
-    app.run(debug=False, host="0.0.0.0", port=port)
+    app.run(debug=False, host=host, port=port)

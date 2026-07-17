@@ -238,8 +238,10 @@ async function handleCopilotSubmit(event) {
         const botDiv = document.createElement("div");
         botDiv.className = "chat-msg bot";
         
+        // First escape the message text to prevent script injection (XSS)
+        const escaped = escapeHTML(data.message);
         // Convert Markdown bold tags to HTML
-        let formatted = data.message
+        let formatted = escaped
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*\s(.*?)\n/g, '<li>$1</li>')
             .replace(/\n\n/g, '<p></p>');
@@ -266,4 +268,18 @@ function copilotQuickQuery(text) {
         input.value = text;
         handleCopilotSubmit(new Event('submit'));
     }
+}
+
+// Utility: HTML Sanitizer to prevent Script Injection attacks
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
 }

@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template, jsonify, request, session
+from functools import wraps
+from urllib.parse import urlparse
+
+from flask import Blueprint, jsonify, render_template, request, session
+
 from app import db, require_auth
 from extended_services.chatbot_service import ChatbotService
 from extended_services.translation_service import TranslationService
-from functools import wraps
 
 
 def verify_same_origin(f):
@@ -22,29 +25,35 @@ def verify_same_origin(f):
         referer = request.headers.get("Referer")
         host_url = request.host_url
 
+        host_parsed = urlparse(host_url)
+
         # Verify Origin
-        if origin and origin not in host_url:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Cross-origin request blocked",
-                    }
-                ),
-                403,
-            )
+        if origin:
+            origin_parsed = urlparse(origin)
+            if origin_parsed.netloc != host_parsed.netloc:
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Cross-origin request blocked",
+                        }
+                    ),
+                    403,
+                )
 
         # Verify Referer
-        if referer and host_url not in referer:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Cross-origin request blocked",
-                    }
-                ),
-                403,
-            )
+        if referer:
+            referer_parsed = urlparse(referer)
+            if referer_parsed.netloc != host_parsed.netloc:
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Cross-origin request blocked",
+                        }
+                    ),
+                    403,
+                )
 
         return f(*args, **kwargs)
 

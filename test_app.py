@@ -1,8 +1,8 @@
 import os
 os.environ["TESTING"] = "true"
-import json
-import unittest
-from app import app, db
+import json  # noqa: E402
+import unittest  # noqa: E402
+from app import app, db  # noqa: E402
 
 
 class ArenaFlowTest(unittest.TestCase):

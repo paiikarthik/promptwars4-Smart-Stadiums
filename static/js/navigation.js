@@ -40,11 +40,25 @@ function initNavigationMap() {
     document.head.appendChild(script);
 }
 
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
 function calculateDirections(event) {
     event.preventDefault();
-    const startVal = document.getElementById("nav-start").value.trim();
+    const startValRaw = document.getElementById("nav-start").value.trim();
+    const startVal = escapeHTML(startValRaw);
     const endSelect = document.getElementById("nav-end");
-    const endText = endSelect.options[endSelect.selectedIndex].text;
+    const endText = escapeHTML(endSelect.options[endSelect.selectedIndex].text);
     const endVal = endSelect.value;
 
     const stepsContainer = document.getElementById("navigation-steps");
