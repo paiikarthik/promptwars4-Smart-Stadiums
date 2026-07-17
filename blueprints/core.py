@@ -1,3 +1,4 @@
+import json
 import queue
 import time
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for, Response
@@ -54,13 +55,13 @@ def event_stream():
                 "telemetry": current_state,
                 "alerts": initial_alerts,
             }
-        yield f"data: {jsonify(initial_payload).get_data(as_text=True)}\n\n"
+        yield f"data: {json.dumps(initial_payload)}\n\n"
 
         try:
             while True:
                 # Wait for state changes in simulation drift or dispatch triggers
                 data = q.get()
-                yield f"data: {jsonify(data).get_data(as_text=True)}\n\n"
+                yield f"data: {json.dumps(data)}\n\n"
         except GeneratorExit:
             with sse_lock:
                 if q in sse_listeners:
